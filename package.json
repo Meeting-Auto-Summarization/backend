@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start":"nodemon"
+    "start": "nodemon index"
   },
   "repository": {
     "type": "git",
@@ -19,7 +19,14 @@
   "homepage": "https://github.com/Meeting-Auto-Summarization/backend#readme",
   "dependencies": {
     "dotenv": "^10.0.0",
-    "express": "^4.17.2"
+    "express": "^4.17.2",
+    "@google-cloud/speech": "^4.10.0",
+    "cookie-parser": "^1.4.6",
+    "express-session": "^1.17.2",
+    "mongoose": "^6.1.8",
+    "node-record-lpcm16": "^1.0.1",
+    "passport": "^0.5.2",
+    "passport-google-oauth2": "^0.2.0"
   },
   "devDependencies": {
     "nodemon": "^2.0.15"

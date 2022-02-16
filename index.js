@@ -8,6 +8,14 @@ const connect = require('./schemas');
 const path = require(`path`);//내장모듈
 
 const app = express();
+const httpServer = require(`http`).createServer(app);//httpserver
+const cors = require(`cors`);
+const io = require(`socket.io`)(httpServer, {
+  cors: {
+    origin: "*",
+  }
+});
+
 app.set('port', process.env.PORT || 8001);
 
 require(`dotenv`).config({ path: path.join(__dirname, `./credentials/.env`) })
@@ -32,6 +40,9 @@ app.use(session({
         secure: false,
     },
 }));
+
+app.use(cors());
+
 app.use(passport.initialize());
 app.use(passport.session());
 
@@ -60,7 +71,72 @@ app.use((err, req, res, next) => {
     res.status(err.status || 500);
     res.render('error');
 });
+const recorder = require('node-record-lpcm16');
 
-app.listen(app.get('port'), () => {
-    console.log(app.get('port'), '번 포트에서 대기중');
-});
+// Imports the Google Cloud client library
+const speech = require('@google-cloud/speech');
+
+// Creates a client
+const client = new speech.SpeechClient();
+io.on("connection", (socket) => {//특정 브라우저와 연결이 됨
+    socket.on("join-room", (roomName, userName, userNick) => {
+      console.log(userNick+"join");
+      socket.join(roomName);
+      socket.to(roomName).emit('user-connected', userName, userNick);
+  
+      socket.on('disconnect', () => {
+        socket.to(roomName).emit("user-disconnected", userName);
+        recording.stop();
+      });
+  
+      const request = {
+        config: {
+          encoding: 'LINEAR16',
+          sampleRateHertz: 16000,
+          languageCode: 'ko-KR',
+        },
+        interimResults: false, // If you want interim results, set this to true
+      };
+  
+      // Create a recognize stream
+      const recognizeStream = client
+        .streamingRecognize(request)
+        .on('error', console.error)
+        .on('data', data => {
+          process.stdout.write(
+            data.results[0] && data.results[0].alternatives[0]
+              ? `${data.results[0].alternatives[0].transcript}\n`
+              : '\n\nReached transcription time limit, press Ctrl+C\n'
+          );
+          io.sockets.in(roomName).emit("msg", userNick, data.results[0] && data.results[0].alternatives[0]
+            ? `${data.results[0].alternatives[0].transcript}\n`
+            : '\n\nReached transcription time limit, press Ctrl+C\n');
+        }
+        );
+  
+      // Start recording and send the microphone input to the Speech API.
+      // Ensure SoX is installed, see https://www.npmjs.com/package/node-record-lpcm16#dependencies
+      let recording = recorder
+        .record({
+          sampleRateHertz: 16000,
+          threshold: 0,
+          // Other options, see https://www.npmjs.com/package/node-record-lpcm16#options
+          verbose: false,
+          recordProgram: 'sox', // Try also "arecord" or "sox"
+          endOnSilence :false
+     
+        });
+  
+      recording.stream()
+        .on('error', console.error)
+        .pipe(recognizeStream);//시작
+  
+  
+  
+    })
+  });
+  
+  
+  httpServer.listen(3001, () => {
+    console.log("listne port 3001");
+  })

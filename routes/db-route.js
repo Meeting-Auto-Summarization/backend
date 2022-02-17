@@ -6,7 +6,7 @@ const DBController = require('../controllers/db-controller')
 router.post('/createMeeting', DBController.postMeeting);//회의 생성 시, 스크립트/요약본 모델 생성
 
 //회의 참여
-router.post('/joinMeeting/:Code', DBController.postJoin);//회의 참여
+//router.post('/joinMeeting/:Code', DBController.postJoin);//회의 참여
 
 //미팅리스트, 참가자 정보
 router.get('/meetingList', DBController.getMeetingList);

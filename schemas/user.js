@@ -12,6 +12,19 @@ const userSchema = new Schema({
         type: String,
         required: true,
     },
+    avatar:{
+        type:String,
+        required:true,
+    },
+    firstName:{
+        type:String
+    },
+    lastName:{
+        type:String
+    },
+    email:{
+        type:String,
+    },
     meetings: [{
         type: ObjectId,
         ref: 'Meeting'

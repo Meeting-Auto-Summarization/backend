@@ -22,6 +22,10 @@ module.exports = () => {
                     //email: profile._json && profile._json.kakao_account_email,
                     id: profile.id,
                     name: profile.displayName,
+                    firstName:profile.name.givenName,
+                    lastName:profile.name.familyName,
+                    avatar:profile.photos[0].value,
+                    email:profile.email,
                 });
                 done(null, newUser);
             }

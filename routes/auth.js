@@ -1,12 +1,15 @@
 const express = require('express');
 const passport = require('passport');
-const auth = require('../middleware/auth');
+const isLogin = require('../middleware/isLogin');
 const router = express.Router();
 
 router.get('/', (req, res) => {//로그인 상태 확인
-    if(auth){
+    if(isLogin(req,res)){
+        console.log("로그인 상태");
+        console.log(req.user)
         res.send(req.user);
     }else{
+        console.log("로그인 X");
         res.send(false);
     }
 })

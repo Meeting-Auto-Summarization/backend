@@ -2,15 +2,6 @@ const express = require('express')
 const router = express.Router()
 const DBController = require('../controllers/db-controller')
 
-<<<<<<< HEAD
-=======
-//회의 생성
-router.post('/createMeeting', DBController.postMeeting);//회의 생성 시, 스크립트/요약본 모델 생성
-
-//회의 참여
-//router.post('/joinMeeting/:Code', DBController.postJoin);//회의 참여
-
->>>>>>> 8bdae985700c24c7f8b16c414a837453a3e01099
 //미팅리스트, 참가자 정보
 router.get('/meetingList', DBController.getMeetingList);
 

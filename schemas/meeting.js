@@ -7,7 +7,7 @@ const meetingSchema = new Schema({
         type: String,
         required: true,
     },
-    url: {
+    code: {
         type: String,
         required: true,
     },

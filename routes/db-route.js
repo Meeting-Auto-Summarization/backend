@@ -2,12 +2,23 @@ const express = require('express')
 const router = express.Router()
 const DBController = require('../controllers/db-controller')
 
-router.get('/meetingList', DBController.getMeetingList);//미팅리스트
-router.get('/:meetingId/script', DBController.getScript);//특정 미팅 스크립트 불러오기
-router.post('/:meetingId/script', DBController.postScript);//특정 미팅 스크립트 수정
-router.get('/:meetingId/surmmarize', DBController.getSurmmarize);//특정 미팅 요약본 불러오기
-router.post('/:meetingId/surmmarize', DBController.postSurmmarize);//특정 미팅 요약본 수정
-router.post('/:nickname/changeNickname', DBController.postNickname);//닉네임 변경
+//회의 생성
+router.post('/createMeeting', DBController.postMeeting);//회의 생성 시, 스크립트/요약본 모델 생성
+
+//회의 참여
+router.post('/joinMeeting/:Code', DBController.postJoin);//회의 참여
+
+//미팅리스트, 참가자 정보
+router.get('/meetingList', DBController.getMeetingList);
+
+//스크립트, 요약본 수정
+router.get('/script/:meetingId', DBController.getScript);//특정 미팅 스크립트 불러오기
+router.post('/script/:meetingId', DBController.postScript);//특정 미팅 스크립트 수정
+router.get('/surmmarize/:meetingId', DBController.getSurmmarize);//특정 미팅 요약본 불러오기
+router.post('/surmmarize/:meetingId', DBController.postSurmmarize);//특정 미팅 요약본 수정
+
+//회원 정보 수정
+router.post('/changeNickname/:nickname', DBController.postNickname);//닉네임 변경
 router.delete('/deleteAccount', DBController.deleteAccount);//회원 탈퇴
 
 

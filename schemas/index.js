@@ -4,8 +4,8 @@ const connect = () => {
     if (process.env.NODE_ENV !== 'production') {
         mongoose.set('debug', true);
     }
-    mongoose.connect('mongodb://root:7750@localhost:27017/admin', {
-        dbName: 'mas',
+    mongoose.connect(process.env.MONGO_URL_PROD, {
+        //dbName: 'mas',
         useNewUrlParser: true,
         useUnifiedTopology: true,
         //useCreateIndex: true,

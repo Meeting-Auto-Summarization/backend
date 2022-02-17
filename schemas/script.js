@@ -16,8 +16,8 @@ const scriptSchema = new Schema({
             type: String,
         },
         isChecked: {
-            type: Number, //1이면 체크
-            default: 0,
+            type: Boolean,
+            default: false,
         },
     }],
 });

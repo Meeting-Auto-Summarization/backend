@@ -3,16 +3,19 @@ const mongoose = require('mongoose');
 const { Schema } = mongoose;
 const { Types: { ObjectId } } = Schema;
 const scriptSchema = new Schema({
-    name: {
+    meetingId: {
         type: ObjectId,
         required: true,
         ref: 'Meeting',
     },
     text: [{
-        user: {
+        nick: {
             type: String,
         },
         content: {
+            type: String,
+        },
+        time: {
             type: String,
         },
         isChecked: {

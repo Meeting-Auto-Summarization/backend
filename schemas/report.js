@@ -3,14 +3,19 @@ const mongoose = require('mongoose');
 const { Schema } = mongoose;
 const { Types: { ObjectId } } = Schema;
 const summarizeSchema = new Schema({
-    name: {
+    meetingId: {
         type: ObjectId,
         required: true,
         ref: 'Meeting',
     },
-    text: {
-        type: String,
-    },
+    report: [[{
+        title: {
+            type: String,
+        },
+        surmmary: {
+            type: String,
+        },
+    }]],
 });
 
-module.exports = mongoose.model('Surmmarize', summarizeSchema);
+module.exports = mongoose.model('Report', summarizeSchema);

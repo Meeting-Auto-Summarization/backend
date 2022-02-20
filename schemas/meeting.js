@@ -3,11 +3,11 @@ const mongoose = require('mongoose');
 const { Schema } = mongoose;
 const { Types: { ObjectId } } = Schema;
 const meetingSchema = new Schema({
-    name: {
+    title: {
         type: String,
         required: true,
     },
-    host: {
+    hostId: {
         type: String,
         required: true,
     },
@@ -19,11 +19,15 @@ const meetingSchema = new Schema({
         type: Number,
         required: true,
     },
+    time: {
+        type: Number,
+        default: 0,
+    },
     date: {
         type: Date,
         default: Date.now,
     },
-    users: [{
+    members: [{
         type: ObjectId,
         required: true,
         ref: 'User'

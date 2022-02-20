@@ -141,9 +141,9 @@ io.on("connection", (socket) => {//특정 브라우저와 연결이 됨
                 content.replace('\n', '');
                 try {
                     const result = await Script.findOneAndUpdate({
-                        name: "620e08ae8c58cb57273f513b",
+                        meetingId: "620e08ae8c58cb57273f513b",
                     }, {
-                        $push: { text: { name: userNick, content: content } },
+                        $push: { text: { nick: userNick, content: content } },
                     });
                 } catch (err) {
                     console.error(err);

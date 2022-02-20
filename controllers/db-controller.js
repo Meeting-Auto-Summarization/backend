@@ -10,8 +10,9 @@ exports.postCreateMeeting = async (req, res, next) => {
     try {
         const meeting = await Meeting.create({
             title: req.body.title,
+            members:[],
             code: req.body.code,
-            hostId: req.user.id,
+            hostId: req.user._id,
             capacity: req.body.capacity,
         });
         await Script.create({ //스크립트 document생성
@@ -23,7 +24,7 @@ exports.postCreateMeeting = async (req, res, next) => {
         await User.findOneAndUpdate({//호스트의 참여회의 목록에 회의 id 추가, 현재 진행중인 미팅 id 저장
             id: req.user.id,
         }, {
-            $push: { meetings: req.body.meetingId },
+            $push: { meetings: meeting._id },
             currentMeetingId: meeting._id,
         });
         await Meeting.findOneAndUpdate({//회의 참여자 목록에 호스트 id추가

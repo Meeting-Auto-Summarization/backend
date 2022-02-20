@@ -52,6 +52,7 @@ exports.joinMeeting = async (req, res, next) => {
                     id: req.user.id,
                 }, {
                     $push: { meetings: meeting._id},
+                    currentMeetingId: meeting._id,
                 });
                 await Meeting.findOneAndUpdate({
                     code: req.params.code,

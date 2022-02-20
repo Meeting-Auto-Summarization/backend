@@ -10,7 +10,7 @@ router.post('/createMeeting', DBController.postCreateMeeting);//회의 생성 �
 //호스트 id 참여자 목록에 추가됨
 
 //회의 참여
-router.post('/joinMeeting/:Code', DBController.postJoinMeeting);//회의 참여
+router.post('/joinMeeting', DBController.postJoinMeeting);//회의 참여
 //게스트 id 참여자 목록에 추가됨
 
 //스크립트, 요약본 불러오기/수정

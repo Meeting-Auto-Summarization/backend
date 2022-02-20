@@ -12,7 +12,7 @@ const summarizeSchema = new Schema({
         title: {
             type: String,
         },
-        surmmary: {
+        summary: {
             type: String,
         },
     }]],

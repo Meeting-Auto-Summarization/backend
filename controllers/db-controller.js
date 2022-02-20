@@ -10,7 +10,7 @@ exports.postCreateMeeting = async (req, res, next) => {
     try {
         const meeting = await Meeting.create({
             title: req.body.title,
-            members:[],
+            members: [],
             code: req.body.code,
             hostId: req.user._id,
             capacity: req.body.capacity,
@@ -71,7 +71,7 @@ exports.joinMeeting = async (req, res, next) => {
     }
 }
 
-
+//회의 목록 가져오기
 exports.getMeetingList = async (req, res, next) => {
     const userId = req.user._id;
     let meetingInfo = [];
@@ -102,6 +102,34 @@ exports.getMeetingList = async (req, res, next) => {
     }
 }
 
+exports.postSTTCheckTrue = async (req, res, next) => {
+    try {
+        await Script.findOneAndUpdate({
+            meetingId: req.params.meetingId
+        }, {
+            $set: { [`text.${req.body.loc}.isChecked`]: true },
+        });
+        res.send('success');
+    } catch (err) {
+        console.error(err);
+        next(err);
+    }
+}
+
+exports.postSTTCheckFalse = async (req, res, next) => {
+    try {
+        await Script.findOneAndUpdate({
+            meetingId: req.params.meetingId
+        }, {
+            $set: { [`text.${req.body.loc}.isChecked`]: false },
+        });
+        res.send('success');
+    } catch (err) {
+        console.error(err);
+        next(err);
+    }
+}
+
 exports.getScript = async (req, res, next) => {
     let scriptInfo = {
         title: '',
@@ -119,6 +147,7 @@ exports.getScript = async (req, res, next) => {
                 isChecked: script.text[i].isChecked,//체크여부
                 nick: script.text[i].nick,//발화자
                 content: script.text[i].content,//내용
+                time: script.text[i].time,//발화 시간
             });
         }
         console.log(scriptInfo);
@@ -143,14 +172,14 @@ exports.postScript = async (req, res, next) => {
 }
 
 exports.getReport = async (req, res, next) => {
-    res.sendFile(path.join(__dirname, '../index.html'));
+    //res.sendFile(path.join(__dirname, '../index.html'));
     try {
         // const meeting = await Meeting.findById(req.params.meetingId);
         // console.log(meeting.name); //회의 이름
         // console.log(meeting.date); //회의 날짜
         const surmmarize = await Report.findOne({ meetingId: req.params.meetingId });
-        console.log(surmmarize.text);
-        res.json(surmmarize.text);
+        console.log(surmmarize.report);
+        res.json(surmmarize.report);
     } catch (err) {
         console.error(err);
         next(err);
@@ -162,7 +191,7 @@ exports.postReport = async (req, res, next) => {
     try {
         await Report.findOneAndUpdate(
             { meetingId: req.params.meetingId },
-            { text: req.body.content }
+            { report: req.body.reports }
         );
         res.send('success');
     } catch (err) {

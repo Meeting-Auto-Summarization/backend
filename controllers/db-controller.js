@@ -12,6 +12,7 @@ exports.postCreateMeeting = async (req, res, next) => {
             name: req.body.name,
             code: req.body.code,
             host: req.body.hostNick,
+            capacity: req.body.capacity,
         });
         await Script.create({ //스크립트 document생성
             name: meeting._id,

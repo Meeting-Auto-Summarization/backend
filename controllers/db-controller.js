@@ -194,6 +194,18 @@ exports.deleteAccount = async (req, res, next) => {
 }
 //현재 참여 중인 회의
 
-//code랑 일치하는 meeting
+exports.getCurrentMeetingId=async(req,res,next)=>{
+    res.send(req.user.currentMeetingId)
+}
 
-exports.get
+exports.getMeeting=async(req,res,next)=>{
+    try{
+        const selectMeeting=await Meeting.findOne({_id:req.params.meetingId});
+        console.log(selectMeeting);
+        res.status(200).send(selectMeeting);
+    }catch(err){
+        next(err);
+        res.send('success');
+    }
+}
+

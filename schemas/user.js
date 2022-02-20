@@ -12,18 +12,22 @@ const userSchema = new Schema({
         type: String,
         required: true,
     },
-    avatar:{
-        type:String,
-        required:true,
+    avatar: {
+        type: String,
+        required: true,
     },
-    firstName:{
-        type:String
+    firstName: {
+        type: String
     },
-    lastName:{
-        type:String
+    lastName: {
+        type: String
     },
-    email:{
-        type:String,
+    email: {
+        type: String,
+    },
+    currentMeetingId: {
+        type: ObjectId,
+        ref: 'Meeting'
     },
     meetings: [{
         type: ObjectId,

@@ -15,6 +15,10 @@ const meetingSchema = new Schema({
         type: String,
         required: true,
     },
+    capacity: {
+        type: Number,
+        required: true,
+    },
     date: {
         type: Date,
         default: Date.now,

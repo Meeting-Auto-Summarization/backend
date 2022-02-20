@@ -126,7 +126,7 @@ io.on("connection", (socket) => {//특정 브라우저와 연결이 됨
         const recognizeStream = client
             .streamingRecognize(request)
             .on('error', console.error)
-            .on('data', data => {
+            .on('data', async function (data) {
                 process.stdout.write(
                     data.results[0] && data.results[0].alternatives[0]
                         ? `${data.results[0].alternatives[0].transcript}\n`
@@ -136,7 +136,18 @@ io.on("connection", (socket) => {//특정 브라우저와 연결이 됨
                     ? `${data.results[0].alternatives[0].transcript}\n`
                     : '\n\nReached transcription time limit, press Ctrl+C\n');
 
-
+                //DB에 발화자와 발화 내용 저장
+                const content = data.results[0].alternatives[0].transcript;
+                content.replace('\n', '');
+                try {
+                    const result = await Script.findOneAndUpdate({
+                        name: "620e08ae8c58cb57273f513b",
+                    }, {
+                        $push: { text: { name: userNick, content: content } },
+                    });
+                } catch (err) {
+                    console.error(err);
+                }
             }
             );
 

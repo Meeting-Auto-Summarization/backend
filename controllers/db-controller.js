@@ -13,11 +13,21 @@ exports.postCreateMeeting = async (req, res, next) => {
             code: req.body.code,
             host: req.body.hostNick,
         });
-        await Script.create({
+        await Script.create({ //스크립트 document생성
             name: meeting._id,
         });
-        await Surmmarize.create({
+        await Surmmarize.create({//요약본 document생성
             name: meeting._id,
+        });
+        await User.findOneAndUpdate({//호스트의 참여회의 목록에 회의 id 추가
+            id: req.user.id,
+        }, {
+            $push: { meetings: req.body.meetingId },
+        });
+        await Meeting.findOneAndUpdate({//회의 참여자 목록에 호스트 id추가
+            code: req.body.code,
+        }, {
+            $push: { users: req.user._id },
         });
         res.send('success');
     } catch (err) {

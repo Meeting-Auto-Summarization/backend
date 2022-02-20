@@ -1,5 +1,4 @@
 const passport = require('passport');
-//const local = require('./localStrategy');
 const google = require('./googleStrategy');
 const User = require('../schemas/user');
 

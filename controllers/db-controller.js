@@ -11,6 +11,7 @@ exports.postCreateMeeting = async (req, res, next) => {
         const meeting = await Meeting.create({
             name: req.body.name,
             code: req.body.code,
+            host: req.body.hostNick,
         });
         await Script.create({
             name: meeting._id,

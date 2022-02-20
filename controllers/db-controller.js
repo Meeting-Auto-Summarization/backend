@@ -42,16 +42,16 @@ exports.postCreateMeeting = async (req, res, next) => {
 //회의 참여
 exports.joinMeeting = async (req, res, next) => {
     //코드에 맞는 회의가 있으면 현재사용자의 currentMeeting에 push하는 작업한 후 true 반환
-    try{
-        const meeting=await Meeting.findOne({code:req.params.code});
-        if(!meeting){
+    try {
+        const meeting = await Meeting.findOne({ code: req.params.code });
+        if (!meeting) {
             res.status(500).send(false);
-        }else{
+        } else {
             try {
                 await User.findOneAndUpdate({
                     id: req.user.id,
                 }, {
-                    $push: { meetings: meeting._id},
+                    $push: { meetings: meeting._id },
                     currentMeetingId: meeting._id,
                 });
                 await Meeting.findOneAndUpdate({
@@ -65,7 +65,7 @@ exports.joinMeeting = async (req, res, next) => {
                 next(error);
             }
         }
-    }catch(err){
+    } catch (err) {
         console.error(err);
         next(err);
     }
@@ -134,7 +134,7 @@ exports.getScript = async (req, res, next) => {
     let scriptInfo = {
         title: '',
         date: '',
-        scripts: [],
+        scripts: {},
     };
     try {
         const meeting = await Meeting.findById(req.params.meetingId);
@@ -142,14 +142,16 @@ exports.getScript = async (req, res, next) => {
         scriptInfo.title = meeting.name;
         scriptInfo.date = dt.getFullYear() + "/" + (dt.getMonth()) + "/" + dt.getDate();
         const script = await Script.findOne({ meetingId: req.params.meetingId });
-        for (let i = 0; i < script.text.length; i++) {
-            scriptInfo.scripts.push({
-                isChecked: script.text[i].isChecked,//체크여부
-                nick: script.text[i].nick,//발화자
-                content: script.text[i].content,//내용
-                time: script.text[i].time,//발화 시간
-            });
-        }
+        scriptInfo.scripts = script;
+        // for (let i = 0; i < script.text.length; i++) {
+        //     scriptInfo.scripts.push({
+        //         id: 
+        //         isChecked: script.text[i].isChecked,//체크여부
+        //         nick: script.text[i].nick,//발화자
+        //         content: script.text[i].content,//내용
+        //         time: script.text[i].time,//발화 시간
+        //     });
+        // }
         console.log(scriptInfo);
         res.json(scriptInfo);
     } catch (err) {
@@ -223,16 +225,16 @@ exports.deleteAccount = async (req, res, next) => {
 }
 //현재 참여 중인 회의
 
-exports.getCurrentMeetingId=async(req,res,next)=>{
+exports.getCurrentMeetingId = async (req, res, next) => {
     res.send(req.user.currentMeetingId)
 }
 
-exports.getMeeting=async(req,res,next)=>{
-    try{
-        const selectMeeting=await Meeting.findOne({_id:req.params.meetingId});
+exports.getMeeting = async (req, res, next) => {
+    try {
+        const selectMeeting = await Meeting.findOne({ _id: req.params.meetingId });
         console.log(selectMeeting);
         res.status(200).send(selectMeeting);
-    }catch(err){
+    } catch (err) {
         next(err);
         res.send('success');
     }

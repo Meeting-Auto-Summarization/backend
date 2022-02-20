@@ -40,20 +40,31 @@ exports.postCreateMeeting = async (req, res, next) => {
 }
 
 //회의 참여
-exports.postJoinMeeting = async (req, res, next) => {
-    try {
-        await User.findOneAndUpdate({
-            id: req.user.id,
-        }, {
-            $push: { meetings: req.params.meetingId },
-        });
-        await Meeting.findOneAndUpdate({
-            code: req.params.code,
-        }, {
-            $push: { members: req.user._id },
-        });
-        res.send('success');
-    } catch (err) {
+exports.joinMeeting = async (req, res, next) => {
+    //코드에 맞는 회의가 있으면 현재사용자의 currentMeeting에 push하는 작업한 후 true 반환
+    try{
+        const meeting=await Meeting.findOne({code:req.params.code});
+        if(!meeting){
+            res.status(500).send(false);
+        }else{
+            try {
+                await User.findOneAndUpdate({
+                    id: req.user.id,
+                }, {
+                    $push: { meetings: meeting._id},
+                });
+                await Meeting.findOneAndUpdate({
+                    code: req.params.code,
+                }, {
+                    $push: { members: req.user._id },
+                });
+                res.status(200).send(true);
+            } catch (error) {
+                console.error(error);
+                next(error);
+            }
+        }
+    }catch(err){
         console.error(err);
         next(err);
     }
@@ -180,3 +191,8 @@ exports.deleteAccount = async (req, res, next) => {
         next(err);
     }
 }
+//현재 참여 중인 회의
+
+//code랑 일치하는 meeting
+
+exports.get

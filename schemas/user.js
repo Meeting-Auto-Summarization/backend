@@ -25,6 +25,11 @@ const userSchema = new Schema({
     email: {
         type: String,
     },
+    isMeeting: {
+        type: Boolean,
+        required: true,
+        default: false
+    },
     currentMeetingId: {
         type: ObjectId,
         ref: 'Meeting'

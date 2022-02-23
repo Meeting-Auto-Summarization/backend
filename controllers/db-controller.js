@@ -45,7 +45,7 @@ exports.joinMeeting = async (req, res, next) => {
     try {
         const meeting = await Meeting.findOne({ code: req.params.code });
         if (!meeting) {
-            res.status(500).send(false);
+            res.send(false);
         } else {
             try {
                 await User.findOneAndUpdate({
@@ -53,13 +53,14 @@ exports.joinMeeting = async (req, res, next) => {
                 }, {
                     $push: { meetings: meeting._id },
                     currentMeetingId: meeting._id,
+                    $set: { isMeeting: true }
                 });
                 await Meeting.findOneAndUpdate({
                     code: req.params.code,
                 }, {
                     $push: { members: req.user._id },
                 });
-                res.status(200).send(true);
+                res.send(true);
             } catch (error) {
                 console.error(error);
                 next(error);
@@ -226,17 +227,148 @@ exports.deleteAccount = async (req, res, next) => {
 //현재 참여 중인 회의
 
 exports.getCurrentMeetingId = async (req, res, next) => {
-    res.send(req.user.currentMeetingId)
+    try {
+        res.send(req.user.currentMeetingId);
+    } catch (err) {
+        console.error(err);
+        next(err);
+    }
+}
+
+exports.getCurrentMeeting = async (req, res, next) => {
+    const meeting = await Meeting.findById(req.user.currentMeetingId);
+    
+    try {
+        res.send(meeting);
+    } catch (err) {
+        console.error(err);
+        next(err);
+    }
+}
+
+exports.getCurrentMeetingScript = async (req, res, next) => {
+    const currentMeetingId = req.user.currentMeetingId;
+    const script = await Script.findOne({ meetingId: currentMeetingId });
+    
+    try {
+        res.send(script.text);
+    } catch (err) {
+        console.error(err);
+        next(err);
+    }
+}
+
+exports.getCurrentMeetingReport = async (req, res, next) => {
+    const currentMeetingId = req.user.currentMeetingId;
+    const report = await Report.findOne({ meetingId: currentMeetingId });
+    
+    try {
+        res.send(report.report);
+    } catch (err) {
+        console.error(err);
+        next(err);
+    }
+}
+
+exports.postCurrentMeetingReport = async (req, res, next) => {
+    const currentMeetingId = req.user.currentMeetingId;
+    const filter = { meetingId: currentMeetingId }
+    const update = { report: req.body.report };
+
+    try {
+        await Report.findOneAndUpdate(filter, update);
+        res.send('success');
+    } catch (err) {
+        console.error(err);
+        next(err);
+    }
 }
 
 exports.getMeeting = async (req, res, next) => {
     try {
         const selectMeeting = await Meeting.findOne({ _id: req.params.meetingId });
         console.log(selectMeeting);
-        res.status(200).send(selectMeeting);
+        res.send(selectMeeting);
     } catch (err) {
         next(err);
         res.send('success');
     }
 }
 
+exports.getIsHost = async (req, res, next) => {
+    const meeting = await Meeting.findOne({ _id: req.user.currentMeetingId });
+    const hostId = meeting.hostId;
+    const userId = req.user._id;
+    const isHost = (hostId == userId);
+
+    try {
+        res.send(isHost);
+    } catch (err) {
+        console.error(err);
+        next(err)
+    }
+}
+
+exports.deleteCurrentMeetingId = async (req, res, next) => {
+    try {
+        await User.findOneAndUpdate({
+            id: req.user.id,
+        }, {
+            $unset: { currentMeetingId: "" }
+        });
+        res.send('success');
+    } catch (err) {
+        console.error(err);
+        next(err);
+    }
+}
+
+exports.getIsMeeting = async (req, res, next) => {
+    try {
+        res.send(req.user.isMeeting);
+    } catch (err) {
+        console.error(err);
+        next(err);
+    }
+}
+
+exports.setIsMeetingFalse = async (req, res, next) => {
+    try {
+        await User.findByIdAndUpdate(req.user._id, { isMeeting: false });
+        res.send('success');
+    } catch (err) {
+        console.error(err);
+        next(err);
+    }
+}
+
+exports.getCurrentMeetingTitle = async (req, res, next) => {
+    const currentMeetingId = req.user.currentMeetingId;
+    const meeting = await Meeting.findOne({ _id: currentMeetingId });
+
+    try {
+        res.send(meeting.title);
+    } catch (err) {
+        console.error(err);
+        next(err);
+    }
+}
+
+exports.postSubmitMeeting = async (req, res, next) => {
+    const currentMeetingId = req.user.currentMeetingId;
+
+    try {
+        await Meeting.findOneAndUpdate(
+            { _id: currentMeetingId },
+            { time: req.body.time }
+        );
+        await Script.findOneAndUpdate(
+            { meetingId: currentMeetingId },
+            { text: req.body.text }
+        );
+        res.send('success');
+    } catch (err) {
+        console.error(err);
+        next(err);
+    }
+}

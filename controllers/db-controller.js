@@ -26,6 +26,7 @@ exports.postCreateMeeting = async (req, res, next) => {
         }, {
             $push: { meetings: meeting._id },
             currentMeetingId: meeting._id,
+            $set: { isMeeting: true },
         });
         await Meeting.findOneAndUpdate({//회의 참여자 목록에 호스트 id추가
             code: req.body.code,
@@ -53,7 +54,7 @@ exports.joinMeeting = async (req, res, next) => {
                 }, {
                     $push: { meetings: meeting._id },
                     currentMeetingId: meeting._id,
-                    $set: { isMeeting: true }
+                    $set: { isMeeting: true },
                 });
                 await Meeting.findOneAndUpdate({
                     code: req.params.code,

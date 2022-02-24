@@ -350,11 +350,11 @@ exports.getIsMeeting = async (req, res, next) => {
 
 exports.setIsMeetingFalse = async (req, res, next) => {
     const filter = { currentMeetingId: req.user.currentMeetingId };
-    const update = { isMeeting: false };
+    const update = { $set: { isMeeting: false } };
 
     try {
         await User.updateMany(filter, update);
-        res.send('success');
+        res.send('setIsMeetingFalseSuccess');
     } catch (err) {
         console.error(err);
         next(err);

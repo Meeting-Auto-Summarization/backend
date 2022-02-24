@@ -259,6 +259,21 @@ exports.getCurrentMeetingScript = async (req, res, next) => {
     }
 }
 
+exports.postCurrentMeetingScript = async (req, res, next) => {
+    const currentMeetingId = req.user.currentMeetingId;
+    const script = req.body.script;
+    const filter = { meetingId: currentMeetingId };
+    const update = { text: script };
+
+    try {
+        await Script.findOneAndUpdate(filter, update);
+        res.send('success');
+    } catch (err) {
+        console.error(err);
+        next(err);
+    }
+}
+
 exports.getCurrentMeetingReport = async (req, res, next) => {
     const currentMeetingId = req.user.currentMeetingId;
     const report = await Report.findOne({ meetingId: currentMeetingId });
@@ -334,8 +349,11 @@ exports.getIsMeeting = async (req, res, next) => {
 }
 
 exports.setIsMeetingFalse = async (req, res, next) => {
+    const filter = { currentMeetingId: req.user.currentMeetingId };
+    const update = { isMeeting: false };
+
     try {
-        await User.findByIdAndUpdate(req.user._id, { isMeeting: false });
+        await User.updateMany(filter, update);
         res.send('success');
     } catch (err) {
         console.error(err);

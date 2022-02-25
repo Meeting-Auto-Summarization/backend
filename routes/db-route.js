@@ -37,5 +37,6 @@ router.get('/deleteCurrentMeetingId', DBController.deleteCurrentMeetingId); // �
 router.get('/isMeeting', DBController.getIsMeeting); // 유저의 회의 참여 여부 판별
 router.get('/setIsMeetingFalse', DBController.setIsMeetingFalse); // 회의에 참여 중인 모든 유저의 회의 참여 여부 false로 지정
 router.get('/currentMeetingTitle', DBController.getCurrentMeetingTitle); // 유저의 현재 참여 중인 회의 제목
+router.get('/currentMeetingDate', DBController.getCurrentMeetingDate) // 유저의 현재 참여 미팅의 생성 시점 불러오기
 
 module.exports = router;

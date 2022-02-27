@@ -22,7 +22,7 @@ app.set('port', process.env.PORT || 8001);
 
 require(`dotenv`).config({ path: path.join(__dirname, `./credentials/.env`) })
 
-const authRouter = require('./routes/auth');
+const authRouter = require('./routes/auth-route');
 const dbRouter = require('./routes/db-route');
 
 connect();
@@ -97,11 +97,11 @@ const request = {
     interimResults: false, // If you want interim results, set this to true
 };
 io.on("connection", (socket) => {//특정 브라우저와 연결이 됨
-    let recording ;
+    let recording;
     socket.on("summaryAlert", (roomName, summaryFlag) => {
         //summaryBtn이 클릭된것을 다른 client에게 알림
         console.log("summaryAlert")
-        io.sockets.adapter.rooms.get(roomName).isSummary=summaryFlag;
+        io.sockets.adapter.rooms.get(roomName).isSummary = summaryFlag;
         io.sockets.in(roomName).emit("summaryOffer", roomName, summaryFlag);
     });
 
@@ -119,36 +119,47 @@ io.on("connection", (socket) => {//특정 브라우저와 연결이 됨
                 keepSilence: true,
             });
             const recognizeStream = client
-            .streamingRecognize(request)
-            .on('error', console.error)
-            .on('data', async function (data) {
-                process.stdout.write(
-                    data.results[0] && data.results[0].alternatives[0]
+                .streamingRecognize(request)
+                .on('error', console.error)
+                .on('data', async function (data) {
+                    process.stdout.write(
+                        data.results[0] && data.results[0].alternatives[0]
+                            ? `${data.results[0].alternatives[0].transcript}\n`
+                            : '\n\nReached transcription time limit, press Ctrl+C\n'
+                    );
+
+                    io.sockets.in(roomName).emit("msg", socket.userNick, data.results[0] && data.results[0].alternatives[0]
                         ? `${data.results[0].alternatives[0].transcript}\n`
-                        : '\n\nReached transcription time limit, press Ctrl+C\n'
-                );
+                        : '\n\nReached transcription time limit, press Ctrl+C\n');
 
-                io.sockets.in(roomName).emit("msg", socket.userNick, data.results[0] && data.results[0].alternatives[0]
-                    ? `${data.results[0].alternatives[0].transcript}\n`
-                    : '\n\nReached transcription time limit, press Ctrl+C\n');
 
-              
-                //DB에 발화자와 발화 내용 저장
-                const content = data.results[0].alternatives[0].transcript;
-                io.sockets.adapter.rooms.get(roomName).script.push({ nick: socket.userNick, content: content });
-                content.replace('\n', '');
-                try {
-                    const result = await Script.findOneAndUpdate({
-                        meetingId: "620e08ae8c58cb57273f513b",
-                    }, {
-                        $push: { text: { nick: userNick, content: content } },
-                    });
-                } catch (err) {
-                    console.error(err);
+                    //DB에 발화자와 발화 내용 저장
+                    const content = data.results[0].alternatives[0].transcript;
+                    io.sockets.adapter.rooms.get(roomName).script.push({ nick: socket.userNick, content: content });
+                    content.replace('\n', '');
+                    try {
+                        const result = await Script.findOneAndUpdate({
+                            meetingId: "620e08ae8c58cb57273f513b",
+                        }, {
+                            $push: { text: { nick: userNick, content: content } },
+                        });
+                    } catch (err) {
+                        console.error(err);
+                    }
+                    console.log(io.sockets.adapter.rooms.get(roomName).script);
+                    // const content = data.results[0].alternatives[0].transcript;
+                    // content.replace('\n', '');
+                    // try {
+                    //     const result = await Script.findOneAndUpdate({
+                    //         meetingId: "620e08ae8c58cb57273f513b",
+                    //     }, {
+                    //         $push: { text: { nick: userNick, content: content } },
+                    //     });
+                    // } catch (err) {
+                    //     console.error(err);
+                    // }
                 }
-                console.log(io.sockets.adapter.rooms.get(roomName).script);
-            }
-            );
+                );
             recording.stream()
                 .on('error', console.error)
                 .pipe(recognizeStream);//시작
@@ -164,13 +175,13 @@ io.on("connection", (socket) => {//특정 브라우저와 연결이 됨
         console.log(userNick + "join");
         socket.join(roomName);
         socket.to(roomName).emit('user-connected', userName, userNick);
-        socket["userNick"]=userNick;
-      
-        if(io.sockets.adapter.rooms.get(roomName).isSummary){
+        socket["userNick"] = userNick;
+
+        if (io.sockets.adapter.rooms.get(roomName).isSummary) {
             //summaryflag값전달
-            const temp=io.sockets.adapter.rooms.get(roomName).isSummary;
-            socket.emit("initSummaryFlag",temp);
-            if(temp){//들어왔는데 summary중임
+            const temp = io.sockets.adapter.rooms.get(roomName).isSummary;
+            socket.emit("initSummaryFlag", temp);
+            if (temp) {//들어왔는데 summary중임
                 recording = recorder.record({
                     sampleRateHertz: 16000,
                     threshold: 0,
@@ -178,53 +189,54 @@ io.on("connection", (socket) => {//특정 브라우저와 연결이 됨
                     verbose: false,
                     recordProgram: 'sox', // Try also "arecord" or "sox"
                     endOnSilence: false,
-                    slience:1000,
+                    slience: 1000,
                 });
                 const recognizeStream = client
-                .streamingRecognize(request)
-                .on('error', console.error)
-                .on('data', async function (data) {
-                    process.stdout.write(
-                        data.results[0] && data.results[0].alternatives[0]
+                    .streamingRecognize(request)
+                    .on('error', console.error)
+                    .on('data', async function (data) {
+                        process.stdout.write(
+                            data.results[0] && data.results[0].alternatives[0]
+                                ? `${data.results[0].alternatives[0].transcript}\n`
+                                : '\n\nReached transcription time limit, press Ctrl+C\n'
+                        );
+
+                        io.sockets.in(roomName).emit("msg", socket.userNick, data.results[0] && data.results[0].alternatives[0]
                             ? `${data.results[0].alternatives[0].transcript}\n`
-                            : '\n\nReached transcription time limit, press Ctrl+C\n'
-                    );
-    
-                    io.sockets.in(roomName).emit("msg", socket.userNick, data.results[0] && data.results[0].alternatives[0]
-                        ? `${data.results[0].alternatives[0].transcript}\n`
-                        : '\n\nReached transcription time limit, press Ctrl+C\n');
-    
-                  
-                    //DB에 발화자와 발화 내용 저장
-                    const content = data.results[0].alternatives[0].transcript;
-                    io.sockets.adapter.rooms.get(roomName).script.push({ nick: socket.userNick, content: content });
-                    content.replace('\n', '');
-                    try {
-                        const result = await Script.findOneAndUpdate({
-                            meetingId: "620e08ae8c58cb57273f513b",
-                        }, {
-                            $push: { text: { nick: userNick, content: content } },
-                        });
-                    } catch (err) {
-                        console.error(err);
+                            : '\n\nReached transcription time limit, press Ctrl+C\n');
+
+
+                        //DB에 발화자와 발화 내용 저장
+                        const content = data.results[0].alternatives[0].transcript;
+                        io.sockets.adapter.rooms.get(roomName).script.push({ nick: socket.userNick, content: content });
+                        content.replace('\n', '');
+                        try {
+                            const result = await Script.findOneAndUpdate({
+                                meetingId: "620e08ae8c58cb57273f513b",
+                            }, {
+                                $push: { text: { nick: userNick, content: content } },
+                            });
+                        } catch (err) {
+                            console.error(err);
+                        }
+                        console.log(io.sockets.adapter.rooms.get(roomName).script);
                     }
-                    console.log(io.sockets.adapter.rooms.get(roomName).script);
-                }
-                );
+                    );
                 recording.stream()
                     .on('error', console.error)
                     .pipe(recognizeStream);//시작
                 console.log(socket.id + " : 요약시작")
             }
-        }else{
-            io.sockets.adapter.rooms.get(roomName).isSummary=false;
-            io.sockets.adapter.rooms.get(roomName).script=[];
+        } else {
+            //처음 들어왔음
+            io.sockets.adapter.rooms.get(roomName).isSummary = false;
+            io.sockets.adapter.rooms.get(roomName).script = [];
         }
         socket.on('disconnect', () => {
             socket.to(roomName).emit("user-disconnected", userName);
             console.log("disconnect")
-            if(recording){
-            recording.stop();
+            if (recording) {
+                recording.stop();
             }
         });
     })

@@ -225,8 +225,8 @@ exports.deleteAccount = async (req, res, next) => {
         next(err);
     }
 }
-//현재 참여 중인 회의
 
+//현재 참여 중인 회의 Id
 exports.getCurrentMeetingId = async (req, res, next) => {
     try {
         res.send(req.user.currentMeetingId);
@@ -238,9 +238,20 @@ exports.getCurrentMeetingId = async (req, res, next) => {
 
 exports.getCurrentMeeting = async (req, res, next) => {
     const meeting = await Meeting.findById(req.user.currentMeetingId);
+    const members = meeting.members;
+    const users = []
+    
+    for (var i = 0; i < members.length; i++) {
+        const mem = await User.findById(members[i]);
+        const name = mem.name;
+        users.push(name);
+    }
     
     try {
-        res.send(meeting);
+        res.send({
+            meeting: meeting,
+            members: users
+        });
     } catch (err) {
         console.error(err);
         next(err);
@@ -386,6 +397,18 @@ exports.postSubmitMeeting = async (req, res, next) => {
             { text: req.body.text }
         );
         res.send('success');
+    } catch (err) {
+        console.error(err);
+        next(err);
+    }
+}
+
+exports.getCurrentMeetingDate = async (req, res, next) => {
+    const currentMeetingId = req.user.currentMeetingId;
+    const meeting = await Meeting.findById(currentMeetingId);
+
+    try {
+        res.send(meeting.date);
     } catch (err) {
         console.error(err);
         next(err);

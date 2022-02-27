@@ -226,16 +226,6 @@ exports.deleteAccount = async (req, res, next) => {
     }
 }
 
-//현재 참여 중인 회의 Id
-exports.getCurrentMeetingId = async (req, res, next) => {
-    try {
-        res.send(req.user.currentMeetingId);
-    } catch (err) {
-        console.error(err);
-        next(err);
-    }
-}
-
 exports.getCurrentMeeting = async (req, res, next) => {
     const meeting = await Meeting.findById(req.user.currentMeetingId);
     const members = meeting.members;
@@ -252,6 +242,48 @@ exports.getCurrentMeeting = async (req, res, next) => {
             meeting: meeting,
             members: users
         });
+    } catch (err) {
+        console.error(err);
+        next(err);
+    }
+}
+
+//현재 참여 중인 회의 Id
+exports.getCurrentMeetingId = async (req, res, next) => {
+    try {
+        res.send(req.user.currentMeetingId);
+    } catch (err) {
+        console.error(err);
+        next(err);
+    }
+}
+
+exports.getCurrentMeetingCode = async (req, res, next) => {
+    const currentMeetingId = req.user.currentMeetingId;
+    const meeting = await Meeting.findById(currentMeetingId);
+    const code = meeting.code;
+
+    try {
+         res.send(code);
+    } catch (err) {
+        console.error(err);
+        next(err);
+    }
+}
+
+exports.getCurrentMeetingMembers = async (req, res, next) => {
+    const meeting = await Meeting.findById(req.user.currentMeetingId);
+    const members = meeting.members;
+    const users = []
+    
+    for (var i = 0; i < members.length; i++) {
+        const mem = await User.findById(members[i]);
+        const name = mem.name;
+        users.push(name);
+    }
+    
+    try {
+        res.send(members);
     } catch (err) {
         console.error(err);
         next(err);
@@ -360,12 +392,24 @@ exports.getIsMeeting = async (req, res, next) => {
 }
 
 exports.setIsMeetingFalse = async (req, res, next) => {
+    const update = { isMeeting: false };
+
+    try {
+        await User.findByIdAndUpdate(req.user._id, update);
+        res.send('setIsMeetingFalseSuccess');
+    } catch (err) {
+        console.error(err);
+        next(err);
+    }
+}
+
+exports.setIsMeetingAllFalse = async (req, res, next) => {
     const filter = { currentMeetingId: req.user.currentMeetingId };
     const update = { $set: { isMeeting: false } };
 
     try {
         await User.updateMany(filter, update);
-        res.send('setIsMeetingFalseSuccess');
+        res.send('setIsMeetingAllFalseSuccess');
     } catch (err) {
         console.error(err);
         next(err);

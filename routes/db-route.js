@@ -25,18 +25,21 @@ router.post('/changeNickname/:nick', isLogin, DBController.postNick);//닉네임
 router.delete('/deleteAccount', isLogin, DBController.deleteAccount);//회원 탈퇴
 
 //회의 진행
-router.get('/currentMeetingId', isLogin, DBController.getCurrentMeetingId); // 유저의 현재 참여 미팅 ID 불러오기
-router.get('/currentMeeting', isLogin, DBController.getCurrentMeeting); // 유저의 현재 참여 미팅 불러오기
-router.get('/currentMeetingScript', isLogin, DBController.getCurrentMeetingScript); // 유저의 현재 참여 미팅의 스크립트 불러오기
-router.post('/currentMeetingScript', isLogin, DBController.postCurrentMeetingScript); // 유저의 현재 참여 미팅의 스크립트 수정하기
-router.get('/currentMeetingReport', isLogin, DBController.getCurrentMeetingReport); // 유저의 현재 참여 미팅의 요약본 불러오기
-router.post('/currentMeetingReport', isLogin, DBController.postCurrentMeetingReport); // 유저의 현재 참여 미팅의 요약본 설정하기
-router.post('/submitMeeting', isLogin, DBController.postSubmitMeeting);  // 회의 시간 수정
+router.get('/currentMeeting', DBController.getCurrentMeeting); // 유저의 현재 참여 미팅 불러오기
+router.get('/currentMeetingId', DBController.getCurrentMeetingId); // 유저의 현재 참여 미팅 ID 불러오기
+router.get('/currentMeetingCode', DBController.getCurrentMeetingCode); // 유저의 현재 참여 미팅 Code 불러오기
+router.get('/currentMeetingTitle', DBController.getCurrentMeetingTitle); // 유저의 현재 참여 중인 회의 제목
+router.get('/currentMeetingDate', DBController.getCurrentMeetingDate) // 유저의 현재 참여 미팅의 생성 시점 불러오기
+router.get('/currentMeetingMembers', DBController.getCurrentMeetingMembers) // 유저의 현재 참여 미팅의 생성 시점 불러오기
+router.get('/currentMeetingScript', DBController.getCurrentMeetingScript); // 유저의 현재 참여 미팅의 스크립트 불러오기
+router.post('/currentMeetingScript', DBController.postCurrentMeetingScript); // 유저의 현재 참여 미팅의 스크립트 수정하기
+router.get('/currentMeetingReport', DBController.getCurrentMeetingReport); // 유저의 현재 참여 미팅의 요약본 불러오기
+router.post('/currentMeetingReport', DBController.postCurrentMeetingReport); // 유저의 현재 참여 미팅의 요약본 설정하기
+router.post('/submitMeeting', DBController.postSubmitMeeting);  // 회의 시간 수정
 router.get('/isHost', DBController.getIsHost); // 유저의 회의 호스트 여부 판별
 router.get('/deleteCurrentMeetingId', DBController.deleteCurrentMeetingId); // 유저의 현재 참여 회의 ID 삭제
-router.get('/isMeeting', isLogin, DBController.getIsMeeting); // 유저의 회의 참여 여부 판별
-router.get('/setIsMeetingFalse', DBController.setIsMeetingFalse); // 회의에 참여 중인 모든 유저의 회의 참여 여부 false로 지정
-router.get('/currentMeetingTitle', isLogin, DBController.getCurrentMeetingTitle); // 유저의 현재 참여 중인 회의 제목
-router.get('/currentMeetingDate', isLogin, DBController.getCurrentMeetingDate) // 유저의 현재 참여 미팅의 생성 시점 불러오기
+router.get('/isMeeting', DBController.getIsMeeting); // 유저의 회의 참여 여부 판별
+router.get('/setIsMeetingFalse', DBController.setIsMeetingFalse); // 회의에 참여 중인 유저의 회의 참여 여부 false로 지정
+router.get('/setIsMeetingAllFalse', DBController.setIsMeetingAllFalse); // 회의에 참여 중인 모든 유저의 회의 참여 여부 false로 지정
 
 module.exports = router;

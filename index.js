@@ -8,6 +8,9 @@ const connect = require('./schemas');
 const MongoStore = require('connect-mongo');
 const path = require(`path`);//내장모듈
 
+const Script = require('./schemas/script');
+const Meeting = require('./schemas/meeting');
+
 const app = express();
 const httpServer = require(`http`).createServer(app);//httpserver
 const cors = require(`cors`);
@@ -105,7 +108,14 @@ io.on("connection", (socket) => {//특정 브라우저와 연결이 됨
         io.sockets.in(roomName).emit("summaryOffer", roomName, summaryFlag);
     });
 
-    socket.on("summaryStateChange", (roomName, summaryFlag) => {
+    socket.on("summaryStateChange", async (roomName, summaryFlag) => {
+        let createMeetingTime;
+        try {
+            const meetingInfo = await Meeting.findOne({ _id: roomName });
+            createMeetingTime = meetingInfo.date;
+        } catch (err) {
+            console.error(err);
+        }
         //녹음 중지 또는 재시작
         if (summaryFlag) {
             // Create a recognize stream
@@ -115,7 +125,7 @@ io.on("connection", (socket) => {//특정 브라우저와 연결이 됨
                 // Other options, see https://www.npmjs.com/package/node-record-lpcm16#options
                 verbose: false,
                 recordProgram: 'sox', // Try also "arecord" or "sox"
-                silence: 1000,
+                silence: 0.5,
                 keepSilence: true,
             });
             const recognizeStream = client
@@ -127,21 +137,22 @@ io.on("connection", (socket) => {//특정 브라우저와 연결이 됨
                             ? `${data.results[0].alternatives[0].transcript}\n`
                             : '\n\nReached transcription time limit, press Ctrl+C\n'
                     );
-
-                    io.sockets.in(roomName).emit("msg", socket.userNick, data.results[0] && data.results[0].alternatives[0]
+                    const time = calTime(createMeetingTime);
+                    io.sockets.in(roomName).emit("msg", socket.userNick, time, data.results[0] && data.results[0].alternatives[0]
                         ? `${data.results[0].alternatives[0].transcript}\n`
                         : '\n\nReached transcription time limit, press Ctrl+C\n');
 
 
+
                     //DB에 발화자와 발화 내용 저장
                     const content = data.results[0].alternatives[0].transcript;
-                    io.sockets.adapter.rooms.get(roomName).script.push({ nick: socket.userNick, content: content });
+                    io.sockets.adapter.rooms.get(roomName).script.push({ time: time, nick: socket.userNick, content: content });
                     content.replace('\n', '');
                     try {
                         const result = await Script.findOneAndUpdate({
-                            meetingId: "620e08ae8c58cb57273f513b",
+                            meetingId: roomName,
                         }, {
-                            $push: { text: { nick: userNick, content: content } },
+                            $push: { text: { nick: socket.userNick, time: time, content: content } },
                         });
                     } catch (err) {
                         console.error(err);
@@ -171,13 +182,20 @@ io.on("connection", (socket) => {//특정 브라우저와 연결이 됨
     })
 
 
-    socket.on("join-room", (roomName, userName, userNick) => {
+    socket.on("join-room", async (roomName, userName, userNick) => {
         console.log(userNick + "join");
         socket.join(roomName);
         socket.to(roomName).emit('user-connected', userName, userNick);
         socket["userNick"] = userNick;
 
         if (io.sockets.adapter.rooms.get(roomName).isSummary) {
+            let createMeetingTime;
+            try {
+                const meetingInfo = await Meeting.findOne({ _id: roomName });
+                createMeetingTime = meetingInfo.date;
+            } catch (err) {
+                console.error(err);
+            }
             //summaryflag값전달
             const temp = io.sockets.adapter.rooms.get(roomName).isSummary;
             socket.emit("initSummaryFlag", temp);
@@ -189,7 +207,8 @@ io.on("connection", (socket) => {//특정 브라우저와 연결이 됨
                     verbose: false,
                     recordProgram: 'sox', // Try also "arecord" or "sox"
                     endOnSilence: false,
-                    slience: 1000,
+
+                    slience: 0.5,
                 });
                 const recognizeStream = client
                     .streamingRecognize(request)
@@ -200,21 +219,21 @@ io.on("connection", (socket) => {//특정 브라우저와 연결이 됨
                                 ? `${data.results[0].alternatives[0].transcript}\n`
                                 : '\n\nReached transcription time limit, press Ctrl+C\n'
                         );
-
-                        io.sockets.in(roomName).emit("msg", socket.userNick, data.results[0] && data.results[0].alternatives[0]
+                        const time = calTime(createMeetingTime);
+                        io.sockets.in(roomName).emit("msg", socket.userNick, time, data.results[0] && data.results[0].alternatives[0]
                             ? `${data.results[0].alternatives[0].transcript}\n`
                             : '\n\nReached transcription time limit, press Ctrl+C\n');
 
 
                         //DB에 발화자와 발화 내용 저장
                         const content = data.results[0].alternatives[0].transcript;
-                        io.sockets.adapter.rooms.get(roomName).script.push({ nick: socket.userNick, content: content });
+                        io.sockets.adapter.rooms.get(roomName).script.push({ time: time, nick: socket.userNick, content: content });
                         content.replace('\n', '');
                         try {
                             const result = await Script.findOneAndUpdate({
-                                meetingId: "620e08ae8c58cb57273f513b",
+                                meetingId: roomName,
                             }, {
-                                $push: { text: { nick: userNick, content: content } },
+                                $push: { text: { nick: socket.userNick, content: content } },
                             });
                         } catch (err) {
                             console.error(err);
@@ -246,3 +265,11 @@ io.on("connection", (socket) => {//특정 브라우저와 연결이 됨
 httpServer.listen(3001, () => {
     console.log("listne port 3001");
 })
+
+//발화시간 계산 함수
+function calTime(meetingTime) {
+    const curTime = new Date();
+    const elapsedTime = (curTime.getTime() - meetingTime.getTime()) / 1000;
+
+    return parseInt(elapsedTime);
+}

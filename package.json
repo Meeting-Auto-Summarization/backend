@@ -29,7 +29,8 @@
     "node-record-lpcm16": "^1.0.1",
     "passport": "^0.5.2",
     "passport-google-oauth2": "^0.2.0",
-    "socket.io": "^4.4.1"
+    "socket.io": "^4.4.1",
+    "sox": "^0.1.0"
   },
   "devDependencies": {
     "morgan": "^1.10.0",

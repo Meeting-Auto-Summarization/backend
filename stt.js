@@ -63,7 +63,7 @@ function stt( //원래 main이었음
         encoding: 'LINEAR16',
         sampleRateHertz: 16000,
         languageCode: 'ko-KR',
-        audioChannelCount: 2,
+        audioChannelCount: 1,
         enableSeparateRecognitionPerChannel: true,
     };
 

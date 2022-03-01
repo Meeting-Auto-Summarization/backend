@@ -20,6 +20,7 @@ const io = require(`socket.io`)(httpServer, {
         credentials: true
     }
 });
+let rooms={};
 
 app.set('port', process.env.PORT || 8001);
 
@@ -103,22 +104,20 @@ io.on("connection", (socket) => {//특정 브라우저와 연결이 됨
     let recording;
     socket.on("summaryAlert", (roomName, summaryFlag) => {
         //summaryBtn이 클릭된것을 다른 client에게 알림
+        console.log(roomName)
         console.log("summaryAlert")
-        io.sockets.adapter.rooms.get(roomName).isSummary = summaryFlag;
+       // io.sockets.adapter.rooms.get(roomName).isSummary = summaryFlag;
+        rooms[roomName].isSummary=summaryFlag;
         io.sockets.in(roomName).emit("summaryOffer", roomName, summaryFlag);
     });
 
-    socket.on("summaryStateChange", async (roomName, summaryFlag) => {
-        let createMeetingTime;
-        try {
-            const meetingInfo = await Meeting.findOne({ _id: roomName });
-            createMeetingTime = meetingInfo.date;
-        } catch (err) {
-            console.error(err);
-        }
-        //녹음 중지 또는 재시작
-        if (summaryFlag) {
-            // Create a recognize stream
+    socket.on('deviceChange',(summaryFlag,deviceId)=>{
+        socket["device"]=deviceId;
+        console.log(socket.device);
+        console.log("device변경");
+        console.log(recording)
+        if(summaryFlag){//종료하고 재시작
+            recording.stop();
             recording = recorder.record({
                 sampleRateHertz: 16000,
                 threshold: 0,
@@ -126,6 +125,7 @@ io.on("connection", (socket) => {//특정 브라우저와 연결이 됨
                 verbose: false,
                 recordProgram: 'sox', // Try also "arecord" or "sox"
                 silence: 0.5,
+                device:deviceId,
                 keepSilence: true,
             });
             const recognizeStream = client
@@ -146,7 +146,7 @@ io.on("connection", (socket) => {//특정 브라우저와 연결이 됨
 
                     //DB에 발화자와 발화 내용 저장
                     const content = data.results[0].alternatives[0].transcript;
-                    io.sockets.adapter.rooms.get(roomName).script.push({ time: time, nick: socket.userNick, content: content });
+                    rooms[roomName].script.push({ time: time, isCheck:false,nick: socket.userNick, content: content });
                     content.replace('\n', '');
                     try {
                         const result = await Script.findOneAndUpdate({
@@ -158,28 +158,89 @@ io.on("connection", (socket) => {//특정 브라우저와 연결이 됨
                         console.error(err);
                     }
                     console.log(io.sockets.adapter.rooms.get(roomName).script);
-                    // const content = data.results[0].alternatives[0].transcript;
-                    // content.replace('\n', '');
-                    // try {
-                    //     const result = await Script.findOneAndUpdate({
-                    //         meetingId: "620e08ae8c58cb57273f513b",
-                    //     }, {
-                    //         $push: { text: { nick: userNick, content: content } },
-                    //     });
-                    // } catch (err) {
-                    //     console.error(err);
-                    // }
+                }
+                );
+            recording.stream()
+                .on('error', console.error)
+                .pipe(recognizeStream);//시작
+        }
+    });
+    socket.on("summaryStateChange", async (roomName, summaryFlag) => {
+        let createMeetingTime;
+        try {
+            const meetingInfo = await Meeting.findOne({ _id: roomName });
+            createMeetingTime = meetingInfo.date;
+        } catch (err) {
+            console.error(err);
+        }
+        console.log("현재device");
+        if (summaryFlag) { // 재시작
+            // Create a recognize stream   
+            if(socket.device){
+            recording = recorder.record({
+                sampleRateHertz: 16000,
+                threshold: 0,
+                // Other options, see https://www.npmjs.com/package/node-record-lpcm16#options
+                verbose: false,
+                recordProgram: 'sox', // Try also "arecord" or "sox"
+                silence: 0.5,
+                keepSilence: true,
+                device:socket.device
+            });
+            }else{
+                recording = recorder.record({
+                    sampleRateHertz: 16000,
+                    threshold: 0,
+                    // Other options, see https://www.npmjs.com/package/node-record-lpcm16#options
+                    verbose: false,
+                    recordProgram: 'sox', // Try also "arecord" or "sox"
+                    silence: 0.5,
+                    keepSilence: true,
+                });
+            }
+        
+            const recognizeStream = client
+                .streamingRecognize(request)
+                .on('error', console.error)
+                .on('data', async function (data) {
+                    process.stdout.write(
+                        data.results[0] && data.results[0].alternatives[0]
+                            ? `${data.results[0].alternatives[0].transcript}\n`
+                            : '\n\nReached transcription time limit, press Ctrl+C\n'
+                    );
+                    const time = calTime(createMeetingTime);
+                    io.sockets.in(roomName).emit("msg", socket.userNick, time, data.results[0] && data.results[0].alternatives[0]
+                        ? `${data.results[0].alternatives[0].transcript}\n`
+                        : '\n\nReached transcription time limit, press Ctrl+C\n');
+
+
+
+                    //DB에 발화자와 발화 내용 저장
+                    const content = data.results[0].alternatives[0].transcript;
+                    rooms[roomName].script.push({ time: time, isCheck:false,nick: socket.userNick, content: content })
+                    content.replace('\n', '');
+                    try {
+                        const result = await Script.findOneAndUpdate({
+                            meetingId: roomName,
+                        }, {
+                            $push: { text: { nick: socket.userNick, time: time, content: content } },
+                        });
+                    } catch (err) {
+                        console.error(err);
+                    }
+                    console.log(io.sockets.adapter.rooms.get(roomName).script);
                 }
                 );
             recording.stream()
                 .on('error', console.error)
                 .pipe(recognizeStream);//시작
             console.log(socket.id + " : 요약시작")
-        } else {
+        } else {//녹음중지
             recording.stop();
             console.log(socket.id + " : 요약중지");
         }
     })
+
 
 
     socket.on("join-room", async (roomName, userName, userNick) => {
@@ -187,8 +248,8 @@ io.on("connection", (socket) => {//특정 브라우저와 연결이 됨
         socket.join(roomName);
         socket.to(roomName).emit('user-connected', userName, userNick);
         socket["userNick"] = userNick;
-
-        if (io.sockets.adapter.rooms.get(roomName).isSummary) {
+        console.log(rooms);
+        if(rooms[roomName]){
             let createMeetingTime;
             try {
                 const meetingInfo = await Meeting.findOne({ _id: roomName });
@@ -197,7 +258,7 @@ io.on("connection", (socket) => {//특정 브라우저와 연결이 됨
                 console.error(err);
             }
             //summaryflag값전달
-            const temp = io.sockets.adapter.rooms.get(roomName).isSummary;
+            const temp = rooms[roomName].isSummary;
             socket.emit("initSummaryFlag", temp);
             if (temp) {//들어왔는데 summary중임
                 recording = recorder.record({
@@ -227,7 +288,7 @@ io.on("connection", (socket) => {//특정 브라우저와 연결이 됨
 
                         //DB에 발화자와 발화 내용 저장
                         const content = data.results[0].alternatives[0].transcript;
-                        io.sockets.adapter.rooms.get(roomName).script.push({ time: time, nick: socket.userNick, content: content });
+                        rooms[roomName].script.push({ time: time,isCheck:false, nick: socket.userNick, content: content })
                         content.replace('\n', '');
                         try {
                             const result = await Script.findOneAndUpdate({
@@ -246,14 +307,24 @@ io.on("connection", (socket) => {//특정 브라우저와 연결이 됨
                     .pipe(recognizeStream);//시작
                 console.log(socket.id + " : 요약시작")
             }
-        } else {
-            //처음 들어왔음
-            io.sockets.adapter.rooms.get(roomName).isSummary = false;
-            io.sockets.adapter.rooms.get(roomName).script = [];
+            rooms[roomName].members.push(socket.id);
+            console.log(rooms);
+        }else{
+            rooms[roomName]={};
+            rooms[roomName].isSummary=false;
+            rooms[roomName].script=[];
+            rooms[roomName].members=[socket.id];
+            console.log(rooms);
         }
+
         socket.on('disconnect', () => {
             socket.to(roomName).emit("user-disconnected", userName);
             console.log("disconnect")
+            rooms[roomName].members= rooms[roomName].members.filter((element) => element !== socket.id);
+            if(rooms[roomName].members===[]){
+                delete rooms[roomName];
+            }
+            console.log(rooms);
             if (recording) {
                 recording.stop();
             }

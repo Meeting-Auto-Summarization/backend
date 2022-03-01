@@ -2,7 +2,7 @@ const isLogin = (req, res, next) => {
     if (req.isAuthenticated()) {
         next();
     } else {
-        res.status(403).send(false);
+        res.send(false);
     }
 }
 

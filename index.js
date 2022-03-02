@@ -120,7 +120,7 @@ io.on("connection", (socket) => {//특정 브라우저와 연결이 됨
         let id;
         for(let i=0;i<rooms[roomName].members.length;i++){
             id=rooms[roomName].members[i];
-            recordingStart(id,socket.userNick,createMeetingTime,roomName);
+            recordingStart(id,socket.userNick,createMeetingTime,roomName,socket.device);
         }
         console.log(socket.id + " : 요약시작")
     }else{
@@ -135,9 +135,9 @@ io.on("connection", (socket) => {//특정 브라우저와 연결이 됨
     }   
     })
 
-    socket.on('deviceChange',(summaryFlag,deviceId)=>{
-        socket["device"]=deviceId;
-        console.log("device변경");
+    socket.on('deviceChange',(summaryFlag,label)=>{
+        socket["device"]=label;
+        console.log(label);
         const roomName=socket.roomName;
         const createMeetingTime=rooms[socket.roomName].createMeetingTime;
         if(summaryFlag){//종료하고 재시작
@@ -149,7 +149,7 @@ io.on("connection", (socket) => {//특정 브라우저와 연결이 됨
                 verbose: false,
                 recordProgram: 'sox', // Try also "arecord" or "sox"
                 silence: 0.5,
-                device:deviceId,
+                device:label,
                 keepSilence: true,
             });
             const recognizeStream = client
@@ -249,11 +249,16 @@ io.on("connection", (socket) => {//특정 브라우저와 연결이 됨
 
     socket.on("micOnOff",(micStatus)=>{
         if(micStatus){
-            recordingStart(socket.id,socket.userNick,rooms[socket.roomName].createMeetingTime,socket.roomName);
+            recordingStart(socket.id,socket.userNick,rooms[socket.roomName].createMeetingTime,socket.roomName,socket.device);
         }else{
             rooms[socket.roomName].recording[socket.id].stop();
         }
     });
+
+    socket.on("handleCheck",(index,isChecked)=>{
+        rooms[socket.roomName].script[index].isCheck=isChecked
+        console.log(rooms[socket.roomName].script);
+    })
 });
 
 
@@ -261,17 +266,31 @@ httpServer.listen(3001, () => {
     console.log("listne port 3001");
 })
 
-const recordingStart=(id,userNick,createMeetingTime,roomName)=>{
-    const recording = recorder.record({
-        sampleRateHertz: 16000,
-        threshold: 0,
-        // Other options, see https://www.npmjs.com/package/node-record-lpcm16#options
-        verbose: false,
-        recordProgram: 'sox', // Try also "arecord" or "sox"
-        endOnSilence: false,
-
-        slience: 0.5,
-    });
+const recordingStart=(id,userNick,createMeetingTime,roomName,device)=>{
+    let recording
+    if(device){
+        recording = recorder.record({
+            sampleRateHertz: 16000,
+            threshold: 0,
+            // Other options, see https://www.npmjs.com/package/node-record-lpcm16#options
+            verbose: false,
+            recordProgram: 'sox', // Try also "arecord" or "sox"
+            endOnSilence: false,
+            device:device,
+            slience: 0.5,
+        });
+    }else{
+        recording = recorder.record({
+            sampleRateHertz: 16000,
+            threshold: 0,
+            // Other options, see https://www.npmjs.com/package/node-record-lpcm16#options
+            verbose: false,
+            recordProgram: 'sox', // Try also "arecord" or "sox"
+            endOnSilence: false,
+            slience: 0.5,
+        });
+    }
+    
     const recognizeStream = client
         .streamingRecognize(request)
         .on('error', console.error)

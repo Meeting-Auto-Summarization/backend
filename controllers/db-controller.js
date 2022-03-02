@@ -8,10 +8,31 @@ const Report = require('../schemas/report');
 //회의 생성
 exports.postCreateMeeting = async (req, res, next) => {
     try {
+        let flag = false;
+        const ongoingMeeting = await Meeting.find({ ongoing: true });
+        let code = '';
+        
+        while (!flag) {
+            var i;
+            code = Math.random().toString(36).substr(2,6);
+
+            for (i = 0; i < ongoingMeeting.length; i++) {
+                if (ongoingMeeting[i].code === code) {
+                    break;
+                }
+            }
+
+            if (i == ongoingMeeting.length) {
+                flag = true
+            }
+
+            console.log('생설 실패');
+        }
+
         const meeting = await Meeting.create({
             title: req.body.title,
             members: [],
-            code: req.body.code,
+            code: code,
             hostId: req.user._id,
             capacity: req.body.capacity,
         });
@@ -28,12 +49,10 @@ exports.postCreateMeeting = async (req, res, next) => {
             currentMeetingId: meeting._id,
             $set: { isMeeting: true },
         });
-        await Meeting.findOneAndUpdate({//회의 참여자 목록에 호스트 id추가
-            code: req.body.code,
-        }, {
-            $push: { members: req.user._id },
-        });
-        res.send('success');
+        await Meeting.findByIdAndUpdate(//회의 참여자 목록에 호스트 id추가
+            meeting._id,
+            { $push: { members: req.user._id } });
+        res.send(code);
     } catch (err) {
         console.error(err);
         next(err);
@@ -45,7 +64,7 @@ exports.joinMeeting = async (req, res, next) => {
     //코드에 맞는 회의가 있으면 현재사용자의 currentMeeting에 push하는 작업한 후 true 반환
     try {
         const meeting = await Meeting.findOne({ code: req.params.code });
-        if (!meeting) {
+        if (!meeting || !meeting.ongoing ) {
             res.send(false);
         } else {
             try {
@@ -76,28 +95,34 @@ exports.joinMeeting = async (req, res, next) => {
 //회의 목록 가져오기
 exports.getMeetingList = async (req, res, next) => {
     const userId = req.user._id;
-    let meetingInfo = [];
+    let meetingList = [];
+
     try {
-        //const user = await User.findById('620df64c8e6f202cdc1a97eb');
         const user = await User.findById(userId);
+
         //회의 이름/날짜 DB에서 하나씩 받아옴
         for (let i = 0; i < user.meetings.length; i++) {
             const meeting = await Meeting.findById(user.meetings[i]);
-            const dt = meeting.date;
-            meetingInfo.push({
-                title: meeting.title,
-                date: dt.getFullYear() + "/" + (dt.getMonth()) + "/" + dt.getDate(),
-                members: [],
-            });
+
+            if (meeting.ongoing) {
+                continue;
+            }
+            
+            let membersName = [];
+
             //위에서 받아온 하나의 회의에 대한 참여자 목록 받아옴
             for (let j = 0; j < meeting.members.length; j++) {
-                const participant = await User.findById(meeting.members[j]);
-                console.log(participant.name);
-                meetingInfo[i].members.push(participant.name);
+                const mem = await User.findById(meeting.members[j]);
+                membersName.push(mem.name);
             }
+
+            meetingList.push({
+                meeting: meeting,
+                members: membersName
+            });
         }
-        console.log(meetingInfo);
-        res.json(meetingInfo);
+
+        res.json(meetingList);
     } catch (err) {
         console.error(err);
         next(err);
@@ -434,7 +459,7 @@ exports.postSubmitMeeting = async (req, res, next) => {
     try {
         await Meeting.findOneAndUpdate(
             { _id: currentMeetingId },
-            { time: req.body.time }
+            { time: req.body.time, ongoing: false }
         );
         await Script.findOneAndUpdate(
             { meetingId: currentMeetingId },
@@ -453,6 +478,26 @@ exports.getCurrentMeetingDate = async (req, res, next) => {
 
     try {
         res.send(meeting.date);
+    } catch (err) {
+        console.error(err);
+        next(err);
+    }
+}
+
+exports.setScriptChecked = async (req, res, next) => {
+    const index = req.body.index;
+    const isChecked = req.body.isChecked;
+    try {
+        const script = await Script.findOne({ meetingId: req.user.currentMeetingId });
+        const text = script.text;
+        text[index].isChecked = isChecked;
+
+        await Script.findOneAndUpdate(
+            { meetingId: req.user.currentMeetingId },
+            { text: text }
+        );
+        
+        res.send('success');
     } catch (err) {
         console.error(err);
         next(err);

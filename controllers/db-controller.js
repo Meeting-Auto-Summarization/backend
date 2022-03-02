@@ -483,3 +483,23 @@ exports.getCurrentMeetingDate = async (req, res, next) => {
         next(err);
     }
 }
+
+exports.setScriptChecked = async (req, res, next) => {
+    const index = req.body.index;
+    const isChecked = req.body.isChecked;
+    try {
+        const script = await Script.findOne({ meetingId: req.user.currentMeetingId });
+        const text = script.text;
+        text[index].isChecked = isChecked;
+
+        await Script.findOneAndUpdate(
+            { meetingId: req.user.currentMeetingId },
+            { text: text }
+        );
+        
+        res.send('success');
+    } catch (err) {
+        console.error(err);
+        next(err);
+    }
+}

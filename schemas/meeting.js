@@ -14,6 +14,7 @@ const meetingSchema = new Schema({
     code: {
         type: String,
         required: true,
+        unique: true
     },
     capacity: {
         type: Number,
@@ -32,6 +33,11 @@ const meetingSchema = new Schema({
         required: true,
         ref: 'User'
     }],
+    ongoing: {
+        type: Boolean,
+        required: true,
+        default: true
+    }
 });
 
 module.exports = mongoose.model('Meeting', meetingSchema);

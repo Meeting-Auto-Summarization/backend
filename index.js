@@ -313,15 +313,17 @@ const recordingStart = (id, userNick, createMeetingTime, roomName, device) => {
             const content = data.results[0].alternatives[0].transcript;
             rooms[roomName].script.push({ time: time, isChecked: false, nick: userNick, content: content })
             content.replace('\n', '');
-            try {
-                const result = await Script.findOneAndUpdate({
-                    meetingId: roomName,
-                }, {
-                    $push: { text: { nick: userNick, content: content } },
-                });
-            } catch (err) {
-                console.error(err);
-            }
+            rooms[roomName].script.push({ time: time, nick: userNick, content: content })
+
+            // try {
+            //     const result = await Script.findOneAndUpdate({
+            //         meetingId: roomName,
+            //     }, {
+            //         $push: { text: { nick: userNick, content: content } },
+            //     });
+            // } catch (err) {
+            //     console.error(err);
+            // }
         }
         );
     recording.stream()

@@ -101,7 +101,20 @@ const request = {
     interimResults: false, // If you want interim results, set this to true
 };
 io.on("connection", (socket) => {//특정 브라우저와 연결이 됨
-
+    socket.on("meetingEnd", async (isHost) => {
+        if (isHost) {
+            try {
+                const result = await Script.findOneAndUpdate({
+                    meetingId: socket.roomName,
+                }, {
+                    //$push: { text: { nick: userNick, content: content } },
+                    text: rooms[socket.roomName].script,
+                });
+            } catch (err) {
+                console.error(err);
+            }
+        }
+    });
     socket.on("summaryAlert", async (summaryFlag) => {
         console.log("summaryAlert");
         const roomName = socket.roomName;
@@ -213,6 +226,7 @@ io.on("connection", (socket) => {//특정 브라우저와 연결이 됨
             const temp = rooms[roomName].isSummary;
             socket.emit("initSummaryFlag", temp);
             socket.emit("initScripts", rooms[roomName].script);
+            console.log(rooms[roomName].script);
             if (temp) {//들어왔는데 summary중임
                 recordingStart(socket.id, socket.userNick, createMeetingTime, roomName);
                 console.log(socket.id + " : 요약시작")
@@ -226,6 +240,7 @@ io.on("connection", (socket) => {//특정 브라우저와 연결이 됨
             rooms[roomName].members = [socket.id];
             rooms[roomName].recording = {};
             rooms[roomName].createMeetingTime = createMeetingTime;
+            socket.emit("initSummaryFlag", false);
         }
         console.log(rooms);
         socket.on('disconnect', () => {
@@ -311,19 +326,8 @@ const recordingStart = (id, userNick, createMeetingTime, roomName, device) => {
 
             //DB에 발화자와 발화 내용 저장
             const content = data.results[0].alternatives[0].transcript;
-            rooms[roomName].script.push({ time: time, isChecked: false, nick: userNick, content: content })
             content.replace('\n', '');
-            rooms[roomName].script.push({ time: time, nick: userNick, content: content })
-
-            // try {
-            //     const result = await Script.findOneAndUpdate({
-            //         meetingId: roomName,
-            //     }, {
-            //         $push: { text: { nick: userNick, content: content } },
-            //     });
-            // } catch (err) {
-            //     console.error(err);
-            // }
+            rooms[roomName].script.push({ time: time, isChecked: false, nick: userNick, content: content })
         }
         );
     recording.stream()

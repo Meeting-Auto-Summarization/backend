@@ -158,29 +158,11 @@ exports.postSTTCheckFalse = async (req, res, next) => {
 }
 
 exports.getScript = async (req, res, next) => {
-    let scriptInfo = {
-        title: '',
-        date: '',
-        scripts: {},
-    };
+    const meetingId = req.params.meetingId;
+
     try {
-        const meeting = await Meeting.findById(req.params.meetingId);
-        const dt = meeting.date;
-        scriptInfo.title = meeting.name;
-        scriptInfo.date = dt.getFullYear() + "/" + (dt.getMonth()) + "/" + dt.getDate();
-        const script = await Script.findOne({ meetingId: req.params.meetingId });
-        scriptInfo.scripts = script;
-        // for (let i = 0; i < script.text.length; i++) {
-        //     scriptInfo.scripts.push({
-        //         id: 
-        //         isChecked: script.text[i].isChecked,//체크여부
-        //         nick: script.text[i].nick,//발화자
-        //         content: script.text[i].content,//내용
-        //         time: script.text[i].time,//발화 시간
-        //     });
-        // }
-        console.log(scriptInfo);
-        res.json(scriptInfo);
+        const script = await Script.findOne({ meetingId: meetingId });
+        res.send(script.text);
     } catch (err) {
         console.error(err);
         next(err);
@@ -201,14 +183,11 @@ exports.postScript = async (req, res, next) => {
 }
 
 exports.getReport = async (req, res, next) => {
-    //res.sendFile(path.join(__dirname, '../index.html'));
+    const meetingId = req.params.meetingId;
+
     try {
-        // const meeting = await Meeting.findById(req.params.meetingId);
-        // console.log(meeting.name); //회의 이름
-        // console.log(meeting.date); //회의 날짜
-        const surmmarize = await Report.findOne({ meetingId: req.params.meetingId });
-        console.log(surmmarize.report);
-        res.json(surmmarize.report);
+        const report = await Report.findOne({ meetingId: meetingId });
+        res.send(report.report);
     } catch (err) {
         console.error(err);
         next(err);
@@ -223,6 +202,28 @@ exports.postReport = async (req, res, next) => {
             { report: req.body.reports }
         );
         res.send('success');
+    } catch (err) {
+        console.error(err);
+        next(err);
+    }
+}
+
+exports.getMeeting = async (req, res, next) => {
+    const meeting = await Meeting.findById(req.params.meetingId);
+    const members = meeting.members;
+    const users = []
+    
+    for (var i = 0; i < members.length; i++) {
+        const mem = await User.findById(members[i]);
+        const name = mem.name;
+        users.push(name);
+    }
+    
+    try {
+        res.send({
+            meeting: meeting,
+            members: users
+        });
     } catch (err) {
         console.error(err);
         next(err);
@@ -365,17 +366,6 @@ exports.postCurrentMeetingReport = async (req, res, next) => {
     } catch (err) {
         console.error(err);
         next(err);
-    }
-}
-
-exports.getMeeting = async (req, res, next) => {
-    try {
-        const selectMeeting = await Meeting.findOne({ _id: req.params.meetingId });
-        console.log(selectMeeting);
-        res.send(selectMeeting);
-    } catch (err) {
-        next(err);
-        res.send('success');
     }
 }
 

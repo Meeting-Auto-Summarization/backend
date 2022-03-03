@@ -113,6 +113,7 @@ io.on("connection", (socket) => {//특정 브라우저와 연결이 됨
             } catch (err) {
                 console.error(err);
             }
+
         }
     });
     socket.on("summaryAlert", async (summaryFlag) => {
@@ -240,6 +241,7 @@ io.on("connection", (socket) => {//특정 브라우저와 연결이 됨
             rooms[roomName].members = [socket.id];
             rooms[roomName].recording = {};
             rooms[roomName].createMeetingTime = createMeetingTime;
+            rooms[roomName].hostId = socket.id;
             socket.emit("initSummaryFlag", false);
         }
         console.log(rooms);
@@ -257,6 +259,9 @@ io.on("connection", (socket) => {//특정 브라우저와 연결이 됨
                 //
                 delete rooms[roomName];
             }*/
+            if (rooms[roomName].hostId === socket.id) {
+                delete rooms[roomName];
+            }
             console.log(rooms);
 
         });

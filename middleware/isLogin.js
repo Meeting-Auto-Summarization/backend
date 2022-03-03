@@ -1,8 +1,9 @@
-const isLogin = (req, res) => {
-    console.log("인증상태");
-    console.log(req.isAuthenticated())
-    if(req.isAuthenticated()) return true;
-    else return false;
+const isLogin = (req, res, next) => {
+    if (req.isAuthenticated()) {
+        next();
+    } else {
+        res.send(false);
+    }
 }
 
 module.exports = isLogin

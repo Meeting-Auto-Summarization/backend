@@ -493,3 +493,42 @@ exports.setScriptChecked = async (req, res, next) => {
         next(err);
     }
 }
+
+exports.getMeetingResult = async (req, res, next) => {
+    const meetingId = req.params.meetingId;
+
+    try {
+        const script = await Script.findOne({ meetingId: meetingId });
+        const report = await Report.findOne({ meetingId: meetingId });
+
+        res.send({
+            script: script.text,
+            report: report.report
+        });
+    } catch (err) {
+        console.error(err);
+        next(err);
+    }
+}
+
+exports.postMeetingResult = async (req, res, next) => {
+    const meetingId = req.body.meetingId;
+    const script = req.body.script;
+    const report = req.body.report;
+
+    try {
+        await Script.findOneAndUpdate(
+            { meetingId: meetingId },
+            { text: script }
+        );
+        await Report.findOneAndUpdate(
+            { meetingId: meetingId },
+            { report: report }
+        );
+
+        res.send('success');
+    } catch (err) {
+        console.error(err);
+        next(err);
+    }
+}

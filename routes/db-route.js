@@ -43,4 +43,8 @@ router.get('/setIsMeetingFalse', DBController.setIsMeetingFalse); // 회의에 �
 router.get('/setIsMeetingAllFalse', DBController.setIsMeetingAllFalse); // 회의에 참여 중인 모든 유저의 회의 참여 여부 false로 지정
 router.post('/scriptChecked', DBController.setScriptChecked); // 스크립트 체크 여부 수정
 
+// 회의 요약
+router.get('/meetingResult/:meetingId', DBController.getMeetingResult);
+router.post('/meetingResult', DBController.postMeetingResult);
+
 module.exports = router;

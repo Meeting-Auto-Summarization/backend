@@ -11,10 +11,10 @@ exports.postCreateMeeting = async (req, res, next) => {
         let flag = false;
         const ongoingMeeting = await Meeting.find({ ongoing: true });
         let code = '';
-        
+
         while (!flag) {
             var i;
-            code = Math.random().toString(36).substr(2,6);
+            code = Math.random().toString(36).substr(2, 6);
 
             for (i = 0; i < ongoingMeeting.length; i++) {
                 if (ongoingMeeting[i].code === code) {
@@ -64,7 +64,7 @@ exports.joinMeeting = async (req, res, next) => {
     //코드에 맞는 회의가 있으면 현재사용자의 currentMeeting에 push하는 작업한 후 true 반환
     try {
         const meeting = await Meeting.findOne({ code: req.params.code });
-        if (!meeting || !meeting.ongoing ) {
+        if (!meeting || !meeting.ongoing) {
             res.send(false);
         } else {
             try {
@@ -107,7 +107,7 @@ exports.getMeetingList = async (req, res, next) => {
             if (meeting.ongoing) {
                 continue;
             }
-            
+
             let membersName = [];
 
             //위에서 받아온 하나의 회의에 대한 참여자 목록 받아옴
@@ -256,13 +256,13 @@ exports.getCurrentMeeting = async (req, res, next) => {
     const meeting = await Meeting.findById(req.user.currentMeetingId);
     const members = meeting.members;
     const users = []
-    
+
     for (var i = 0; i < members.length; i++) {
         const mem = await User.findById(members[i]);
         const name = mem.name;
         users.push(name);
     }
-    
+
     try {
         res.send({
             meeting: meeting,
@@ -290,7 +290,7 @@ exports.getCurrentMeetingCode = async (req, res, next) => {
     const code = meeting.code;
 
     try {
-         res.send(code);
+        res.send(code);
     } catch (err) {
         console.error(err);
         next(err);
@@ -301,13 +301,13 @@ exports.getCurrentMeetingMembers = async (req, res, next) => {
     const meeting = await Meeting.findById(req.user.currentMeetingId);
     const members = meeting.members;
     const users = []
-    
+
     for (var i = 0; i < members.length; i++) {
         const mem = await User.findById(members[i]);
         const name = mem.name;
         users.push(name);
     }
-    
+
     try {
         res.send(members);
     } catch (err) {
@@ -319,7 +319,7 @@ exports.getCurrentMeetingMembers = async (req, res, next) => {
 exports.getCurrentMeetingScript = async (req, res, next) => {
     const currentMeetingId = req.user.currentMeetingId;
     const script = await Script.findOne({ meetingId: currentMeetingId });
-    
+
     try {
         res.send(script.text);
     } catch (err) {
@@ -346,7 +346,7 @@ exports.postCurrentMeetingScript = async (req, res, next) => {
 exports.getCurrentMeetingReport = async (req, res, next) => {
     const currentMeetingId = req.user.currentMeetingId;
     const report = await Report.findOne({ meetingId: currentMeetingId });
-    
+
     try {
         res.send(report.report);
     } catch (err) {
@@ -451,10 +451,10 @@ exports.postSubmitMeeting = async (req, res, next) => {
             { _id: currentMeetingId },
             { time: req.body.time, ongoing: false }
         );
-        await Script.findOneAndUpdate(
-            { meetingId: currentMeetingId },
-            { text: req.body.text }
-        );
+        // await Script.findOneAndUpdate(
+        //     { meetingId: currentMeetingId },
+        //     { text: req.body.text }
+        // );
         res.send('success');
     } catch (err) {
         console.error(err);
@@ -475,23 +475,23 @@ exports.getCurrentMeetingDate = async (req, res, next) => {
 }
 
 exports.setScriptChecked = async (req, res, next) => {
-    const index = req.body.index;
-    const isChecked = req.body.isChecked;
-    try {
-        const script = await Script.findOne({ meetingId: req.user.currentMeetingId });
-        const text = script.text;
-        text[index].isChecked = isChecked;
+    // const index = req.body.index;
+    // const isChecked = req.body.isChecked;
+    // try {
+    //     const script = await Script.findOne({ meetingId: req.user.currentMeetingId });
+    //     const text = script.text;
+    //     text[index].isChecked = isChecked;
 
-        await Script.findOneAndUpdate(
-            { meetingId: req.user.currentMeetingId },
-            { text: text }
-        );
-        
-        res.send('success');
-    } catch (err) {
-        console.error(err);
-        next(err);
-    }
+    //     await Script.findOneAndUpdate(
+    //         { meetingId: req.user.currentMeetingId },
+    //         { text: text }
+    //     );
+
+    //     res.send('success');
+    // } catch (err) {
+    //     console.error(err);
+    //     next(err);
+    // }
 }
 
 exports.getMeetingResult = async (req, res, next) => {

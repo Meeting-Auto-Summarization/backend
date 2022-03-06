@@ -248,20 +248,29 @@ io.on("connection", (socket) => {//특정 브라우저와 연결이 됨
         socket.on('disconnect', () => {
             socket.to(roomName).emit("user-disconnected", userName);
             console.log("disconnect")
-            if (rooms[roomName].recording[socket.id]) {
-                rooms[roomName].recording[socket.id].stop();
-            }
-            delete rooms[roomName].recording[socket.id];
-            //recording 지움
+            if (rooms[roomName]) {
+                if (rooms[roomName].recording[socket.id]) {
+                    rooms[roomName].recording[socket.id].stop();
+                }
+                delete rooms[roomName].recording[socket.id];
+                //recording 지움
+                rooms[roomName].members = rooms[roomName].members.filter((element) => element !== socket.id);
+                if (rooms[roomName].hostId === socket.id) {
+                    rooms[roomName].members.forEach((e) => {
+                        if (rooms[roomName].recording[e]) {
+                            rooms[roomName].recording[e].stop();
+                        }
+                    })
+                    delete rooms[roomName];
 
-            rooms[roomName].members = rooms[roomName].members.filter((element) => element !== socket.id);
+                }
+            }
+
             /*if (rooms[roomName].members === []) {
                 //
                 delete rooms[roomName];
             }*/
-            if (rooms[roomName].hostId === socket.id) {
-                delete rooms[roomName];
-            }
+
             console.log(rooms);
 
         });

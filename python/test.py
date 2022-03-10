@@ -3,11 +3,12 @@ from docx.shared import Inches
 import sys, json
 
 if __name__ == '__main__':
-    report = json.loads(sys.argv[1])
+    meeting = json.loads(sys.argv[1])
+    report = json.loads(sys.argv[2])
 
     document = Document()
 
-    document.add_heading('Document Title', 0)
+    document.add_heading(meeting['title'], 0)
 
     for i in range(len(report)):
         for j in range(len(report[i])):

@@ -18,7 +18,7 @@ if __name__ == '__main__':
                 heading = document.add_heading(report[i][j]['title'], level=2)
                 p = document.add_paragraph(report[i][j]['summary'], style='List Bullet')
 
-    id = report[0][0]['_id']
+    id = meeting['_id']
     document.save(f'{id}.docx')
     print(id)
     sys.stdout.flush()

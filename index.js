@@ -28,6 +28,7 @@ require(`dotenv`).config({ path: path.join(__dirname, `./credentials/.env`) })
 
 const authRouter = require('./routes/auth-route');
 const dbRouter = require('./routes/db-route');
+const pyRouter = require('./routes/py-route');
 
 connect();
 passportConfig();
@@ -57,6 +58,7 @@ app.use(passport.session());
 //router 넣는 부분
 app.use('/auth', authRouter);
 app.use('/db', dbRouter);
+app.use('/py', pyRouter);
 app.use('/', (req, res) => {
     res.send("hello");
 });
@@ -161,7 +163,7 @@ io.on("connection", (socket) => {//특정 브라우저와 연결이 됨
                 threshold: 0,
                 // Other options, see https://www.npmjs.com/package/node-record-lpcm16#options
                 verbose: false,
-                recordProgram: 'sox', // Try also "arecord" or "sox"
+                recordProgram: 'rec', // Try also "arecord" or "sox"
                 silence: 0.5,
                 device: label,
                 keepSilence: true,
@@ -297,7 +299,7 @@ const recordingStart = (id, userNick, createMeetingTime, roomName, device) => {
             threshold: 0,
             // Other options, see https://www.npmjs.com/package/node-record-lpcm16#options
             verbose: false,
-            recordProgram: 'sox', // Try also "arecord" or "sox"
+            recordProgram: 'rec', // Try also "arecord" or "sox"
             endOnSilence: false,
             device: device,
             slience: 0.5,
@@ -308,7 +310,7 @@ const recordingStart = (id, userNick, createMeetingTime, roomName, device) => {
             threshold: 0,
             // Other options, see https://www.npmjs.com/package/node-record-lpcm16#options
             verbose: false,
-            recordProgram: 'sox', // Try also "arecord" or "sox"
+            recordProgram: 'rec', // Try also "arecord" or "sox"
             endOnSilence: false,
             slience: 0.5,
         });

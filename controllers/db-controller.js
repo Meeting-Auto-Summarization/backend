@@ -451,10 +451,10 @@ exports.postSubmitMeeting = async (req, res, next) => {
             { _id: currentMeetingId },
             { time: req.body.time, ongoing: false }
         );
-        // await Script.findOneAndUpdate(
-        //     { meetingId: currentMeetingId },
-        //     { text: req.body.text }
-        // );
+        await Script.findOneAndUpdate(
+            { meetingId: currentMeetingId },
+            { text: req.body.text }
+        );
         res.send('success');
     } catch (err) {
         console.error(err);
@@ -498,10 +498,22 @@ exports.getMeetingResult = async (req, res, next) => {
     const meetingId = req.params.meetingId;
 
     try {
+        const meeting = await Meeting.findById(meetingId);
         const script = await Script.findOne({ meetingId: meetingId });
         const report = await Report.findOne({ meetingId: meetingId });
 
+        const members = meeting.members;
+        const users = []
+
+        for (var i = 0; i < members.length; i++) {
+            const mem = await User.findById(members[i]);
+            const name = mem.name;
+            users.push(name);
+        }
+
         res.send({
+            meeting: meeting,
+            members: users,
             script: script.text,
             report: report.report
         });

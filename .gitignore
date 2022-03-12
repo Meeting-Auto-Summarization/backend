@@ -3,3 +3,7 @@
 
 # credentials
 .env
+
+# model
+/.cache
+/venv/lib/python3.9/site-packages/torch

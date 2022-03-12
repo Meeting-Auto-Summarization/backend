@@ -1,5 +1,7 @@
 const spawn = require('child_process').spawn;
 var path = require('path');
+const Script = require('../schemas/script');
+const Report = require('../schemas/report');
 var fs = require('fs').promises;
 
 exports.generateScriptDocx = (req, res) => {
@@ -8,8 +10,8 @@ exports.generateScriptDocx = (req, res) => {
 
     console.log(script)
 
-    python.stdout.on('data', function(result) {
-        const filename = `${result.toString().replace(/\n/g, "")}.docx`;  
+    python.stdout.on('data', function(data) {
+        const filename = `${data.toString().replace(/\n/g, "")}.docx`;  
         res.setHeader('Content-Disposition', `attachment; filename=${filename}`); // 이게 핵심 
         res.setHeader('Content-Type', '"application/octet-stream"');
         res.sendFile(path.join(__dirname, '../', filename), function() {
@@ -25,14 +27,14 @@ exports.generateScriptDocx = (req, res) => {
         console.log(data.toString());
         res.send(data.toString());
     });
-}
+};
 
 exports.generateReportDocx = (req, res) => {
     const { meeting, report } = req.query;
     const python = spawn('venv/bin/python3.9', ['./python/reportDocx.py', JSON.stringify(meeting), JSON.stringify(report)]);
 
-    python.stdout.on('data', function(result) {
-        const filename = `${result.toString().replace(/\n/g, "")}.docx`;  
+    python.stdout.on('data', function(data) {
+        const filename = `${data.toString().replace(/\n/g, "")}.docx`;  
         res.setHeader('Content-Disposition', `attachment; filename=${filename}`); // 이게 핵심 
         res.setHeader('Content-Type', '"application/octet-stream"');
         res.sendFile(path.join(__dirname, '../', filename), function() {
@@ -48,7 +50,7 @@ exports.generateReportDocx = (req, res) => {
         console.log(data.toString());
         res.send(data.toString());
     });
-}
+};
 
 exports.generateScriptTxt = async (req, res) => {
     const { meeting, script } = req.query;
@@ -96,7 +98,7 @@ exports.generateScriptTxt = async (req, res) => {
     }
 
     sendTxt();
-}
+};
 
 exports.generateReportTxt = (req, res) => {
     const { meeting, report } = req.query;
@@ -149,4 +151,66 @@ exports.generateReportTxt = (req, res) => {
     }
 
     sendTxt();
-}
+};
+
+exports.generateSummary = async (req, res, next) => {
+    const { meetingId, report } = req.body;
+
+    let selected = new Array(report.length);
+
+    for (var i = 0; i < report.length; i++) {
+        selected[i] = new Array(report[i].length);
+
+        for (var j = 0; j < report[i].length; j++) {
+            selected[i][j] = report[i][j].selected;
+        }
+    }
+    
+    try {
+        const script = await Script.findOne({ meetingId: meetingId });
+        const reportObject = await Report.findOne({ meetingId: meetingId });
+        const text = script.text;
+
+        let contents = new Array(selected.length);
+        
+        for (var i = 0; i < selected.length; i++) {
+            contents[i] = new Array(selected[i].length);
+
+            for (var j = 0; j < selected[i].length; j++) {
+                contents[i][j] = '';
+
+                for (var k = 0; k < selected[i][j].length; k++) {
+                    const line = text.find(t => t._id.toString() === selected[i][j][k]);
+                    contents[i][j] += `${line.content}. `;
+                }
+            }
+        }
+
+        const python = spawn('venv/bin/python3.9', ['./python/predict.py', JSON.stringify(contents)]);
+
+        python.stdout.on('data', async function(data) {
+            const summary = Function('"use strict";return (' + data.toString() + ')')();
+            const report = reportObject.report;
+            
+            for (var i = 0; i < summary.length; i++) {
+                for (var j = 0; j < summary[i].length; j++) {
+                    report[i][j].summary = summary[i][j];
+                }
+            }
+
+            await Report.findOneAndUpdate(
+                { meetingId: meetingId },
+                { report: report }
+            )
+            res.send(data.toString());
+        });
+
+        python.stderr.on('data', function(data) {
+            console.log(data.toString());
+            res.send(data.toString());
+        });
+    } catch (err) {
+        console.error(err);
+        next(err);
+    }
+};

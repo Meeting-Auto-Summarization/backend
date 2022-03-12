@@ -15,6 +15,10 @@ const summarizeSchema = new Schema({
         summary: {
             type: String,
         },
+        // selected: [{
+        //     type: ObjectId,
+        //     ref: 'Script.text'
+        // }]
     }]],
 });
 

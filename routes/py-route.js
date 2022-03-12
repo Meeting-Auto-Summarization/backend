@@ -8,4 +8,6 @@ router.get('/report-docx', pyController.generateReportDocx);
 router.get('/script-txt', pyController.generateScriptTxt);
 router.get('/report-txt', pyController.generateReportTxt);
 
+router.post('/summarize', pyController.generateSummary);
+
 module.exports = router;

@@ -1,9 +1,9 @@
 # dependencies
-/node_modules
+node_modules
 
 # credentials
 .env
 
 # model
-/python/.cache
-/venv
+.cache
+venv

@@ -16,7 +16,7 @@ const httpServer = require(`http`).createServer(app);//httpserver
 const cors = require(`cors`);
 const io = require(`socket.io`)(httpServer, {
     cors: {
-        origin: "http://localhost:3000",
+        origin: "http://ec2-3-38-49-118.ap-northeast-2.compute.amazonaws.com:3000",
         credentials: true
     }
 });
@@ -48,7 +48,7 @@ app.use(session({
 }));
 
 app.use(cors({
-    origin: "http://localhost:3000",
+    origin: "http://ec2-3-38-49-118.ap-northeast-2.compute.amazonaws.com:3000",
     credentials: true
 }));
 

@@ -6,4 +6,4 @@
 
 # model
 /python/.cache
-/venv/lib/python3.9/site-packages/torch
+/venv

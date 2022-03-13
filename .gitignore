@@ -6,4 +6,4 @@ node_modules
 
 # model
 .cache
-venv
+.venv

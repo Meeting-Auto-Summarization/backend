@@ -12,11 +12,18 @@ const Script = require('./schemas/script');
 const Meeting = require('./schemas/meeting');
 
 const app = express();
-const httpServer = require(`http`).createServer(app);//httpserver
+//const httpServer = require(`http`).createServer(app);//httpserver
+
+const fs=require(`fs`);
+const httpsServer=require(`https`).createServer({
+  cert: fs.readFileSync('/etc/nginx/certificate/nginx-certificate.crt'),
+  key: fs.readFileSync('/etc/nginx/certificate/nginx.key'),
+}, app);
+
 const cors = require(`cors`);
-const io = require(`socket.io`)(httpServer, {
+const io = require(`socket.io`)(httpsServer, {
     cors: {
-        origin: "http://ec2-3-38-49-118.ap-northeast-2.compute.amazonaws.com:3000",
+        origin: "https://ec2-3-38-49-118.ap-northeast-2.compute.amazonaws.com",
         credentials: true
     }
 });
@@ -48,7 +55,7 @@ app.use(session({
 }));
 
 app.use(cors({
-    origin: "http://ec2-3-38-49-118.ap-northeast-2.compute.amazonaws.com:3000",
+    origin: "https://ec2-3-38-49-118.ap-northeast-2.compute.amazonaws.com",
     credentials: true
 }));
 
@@ -296,10 +303,13 @@ io.on("connection", (socket) => {//특정 브라우저와 연결이 됨
 });
 
 
-httpServer.listen(3001, () => {
+/*httpServer.listen(3001, () => {
+    console.log("listne port 3001");
+})*/
+
+httpsServer.listen(3001, () => {
     console.log("listne port 3001");
 })
-
 const recordingStart = (id, userNick, createMeetingTime, roomName, device) => {
     let recording
     if (device) {

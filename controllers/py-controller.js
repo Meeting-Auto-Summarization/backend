@@ -6,7 +6,7 @@ var fs = require('fs').promises;
 
 exports.generateScriptDocx = (req, res) => {
     const { meeting, script } = req.query;
-    const python = spawn('venv/bin/python3.9', ['./python/scriptDocx.py', JSON.stringify(meeting), JSON.stringify(script)]);
+    const python = spawn('.venv/bin/python3.9', ['./python/scriptDocx.py', JSON.stringify(meeting), JSON.stringify(script)]);
 
     console.log(script)
 
@@ -31,7 +31,7 @@ exports.generateScriptDocx = (req, res) => {
 
 exports.generateReportDocx = (req, res) => {
     const { meeting, report } = req.query;
-    const python = spawn('venv/bin/python3.9', ['./python/reportDocx.py', JSON.stringify(meeting), JSON.stringify(report)]);
+    const python = spawn('..venv/bin/python3.9', ['./python/reportDocx.py', JSON.stringify(meeting), JSON.stringify(report)]);
 
     python.stdout.on('data', function(data) {
         const filename = `${data.toString().replace(/\n/g, "")}.docx`;  
@@ -186,7 +186,7 @@ exports.generateSummary = async (req, res, next) => {
             }
         }
 
-        const python = spawn('venv/bin/python3.9', ['./python/predict.py', JSON.stringify(contents)]);
+        const python = spawn('.venv/bin/python3.9', ['./python/predict.py', JSON.stringify(contents)]);
 
         python.stdout.on('data', async function(data) {
             const summary = Function('"use strict";return (' + data.toString() + ')')();

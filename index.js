@@ -73,9 +73,7 @@ if (process.env.NODE_ENV == 'production') {
     //배포시
 } else if (process.env.NODE_ENV == 'development') {
     //개발시
-    app.listen(port, () => {
-        console.log(`running on ${port}`);
-    })
+
 }
 
 app.use((req, res, next) => {
@@ -307,9 +305,7 @@ io.on("connection", (socket) => {//특정 브라우저와 연결이 됨
     console.log("listne port 3001");
 })*/
 
-httpsServer.listen(3001, () => {
-    console.log("listne port 3001");
-})
+
 const recordingStart = (id, userNick, createMeetingTime, roomName, device) => {
     let recording
     if (device) {
@@ -362,7 +358,9 @@ const recordingStart = (id, userNick, createMeetingTime, roomName, device) => {
 
     rooms[roomName].recording[id] = recording;
 }
-
+httpsServer.listen(3001, () => {
+    console.log("listne port 3001");
+})
 //발화시간 계산 함수
 function calTime(meetingTime) {
     const curTime = new Date();

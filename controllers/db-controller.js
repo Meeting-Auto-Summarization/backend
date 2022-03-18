@@ -4,6 +4,7 @@ const User = require('../schemas/user');
 const Meeting = require('../schemas/meeting');
 const Script = require('../schemas/script');
 const Report = require('../schemas/report');
+var fs = require('fs').promises;
 
 //회의 생성
 exports.postCreateMeeting = async (req, res, next) => {

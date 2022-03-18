@@ -28,7 +28,6 @@ require(`dotenv`).config({ path: path.join(__dirname, `./credentials/.env`) })
 
 const authRouter = require('./routes/auth-route');
 const dbRouter = require('./routes/db-route');
-const pyRouter = require('./routes/py-route');
 
 connect();
 passportConfig();
@@ -58,7 +57,6 @@ app.use(passport.session());
 //router 넣는 부분
 app.use('/auth', authRouter);
 app.use('/db', dbRouter);
-app.use('/py', pyRouter);
 app.use('/', (req, res) => {
     res.send("hello");
 });

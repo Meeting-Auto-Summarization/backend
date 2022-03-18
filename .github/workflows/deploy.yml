@@ -32,3 +32,4 @@ jobs:
             cd /home/${{ secrets.USER_NAME }}/mas/backend
             git fetch
             git pull origin deploy
+            sudo npm i

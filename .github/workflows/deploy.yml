@@ -29,7 +29,7 @@ jobs:
           username: ${{ secrets.USER_NAME }}
           key: ${{ secrets.SSH_KEY }}
           script: |
-            cd /home/${{ secrets.USER_NAME }}/mas/backend
+            cd /home/${{ secrets.DIR }}/mas/backend
             git fetch
             git pull origin deploy
-            sudo npm i
+            npm i

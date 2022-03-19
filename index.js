@@ -359,7 +359,7 @@ const recordingStart = (id, userNick, createMeetingTime, roomName, device) => {
     rooms[roomName].recording[id] = recording;
 }
 httpsServer.listen(3001, () => {
-    console.log("listne port 3001");
+    console.log("listen port 3001");
 })
 //발화시간 계산 함수
 function calTime(meetingTime) {

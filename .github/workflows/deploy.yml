@@ -33,3 +33,4 @@ jobs:
             git fetch
             git pull origin deploy
             npm i
+            pm2 reload mas_server

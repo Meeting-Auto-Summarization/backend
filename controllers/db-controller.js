@@ -93,6 +93,27 @@ exports.joinMeeting = async (req, res, next) => {
     }
 }
 
+exports.deleteMeeting = async (req, res, next) => {
+    const deleted = req.body.deleted;
+    const userId = req.user._id
+    
+    try {
+        const user = await User.findById(userId);
+        const meetings = user.meetings;
+        
+        for (let i = 0; i < deleted.length; i++) {
+            await Meeting.findByIdAndDelete(deleted[i]);
+            meetings.splice(meetings.indexOf(deleted[i]), 1);
+            await User.findByIdAndUpdate(userId, { meetings: meetings });
+        }
+
+        res.send('success');
+    } catch (err) {
+        console.error(err);
+        next(err);
+    }
+}
+
 //회의 목록 가져오기
 exports.getMeetingList = async (req, res, next) => {
     const userId = req.user._id;

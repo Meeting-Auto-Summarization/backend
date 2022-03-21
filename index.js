@@ -100,7 +100,7 @@ const request = {
     },
     interimResults: false, // If you want interim results, set this to true
 };
-io.on("connection", (socket) => {//특정 브라우저와 연결이 됨
+io.on("connection", (socket) => { // 특정 브라우저와 연결이 됨
     socket.on("meetingEnd", async (isHost) => {
         if (isHost) {
             try {
@@ -244,7 +244,9 @@ io.on("connection", (socket) => {//특정 브라우저와 연결이 됨
             rooms[roomName].hostId = socket.id;
             socket.emit("initSummaryFlag", false);
         }
+
         console.log(rooms);
+        
         socket.on('disconnect', () => {
             socket.to(roomName).emit("user-disconnected", userName);
             console.log("disconnect")
@@ -262,7 +264,6 @@ io.on("connection", (socket) => {//특정 브라우저와 연결이 됨
                         }
                     })
                     delete rooms[roomName];
-
                 }
             }
 
@@ -272,7 +273,6 @@ io.on("connection", (socket) => {//특정 브라우저와 연결이 됨
             }*/
 
             console.log(rooms);
-
         });
     });
 

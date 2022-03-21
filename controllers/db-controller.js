@@ -72,15 +72,16 @@ exports.joinMeeting = async (req, res, next) => {
                 await User.findOneAndUpdate({
                     id: req.user.id,
                 }, {
-                    $push: { meetings: meeting._id },
+                    $addToSet: { meetings: meeting._id },
                     currentMeetingId: meeting._id,
                     $set: { isMeeting: true },
                 });
-                await Meeting.findOneAndUpdate({
-                    code: req.params.code,
-                }, {
-                    $push: { members: req.user._id },
-                });
+
+                await Meeting.findOneAndUpdate(
+                    { code: req.params.code },
+                    { $addToSet: { members: req.user._id } }
+                );
+
                 res.send(true);
             } catch (error) {
                 console.error(error);
@@ -95,16 +96,23 @@ exports.joinMeeting = async (req, res, next) => {
 
 exports.deleteMeeting = async (req, res, next) => {
     const deleted = req.body.deleted;
-    const userId = req.user._id
+    const userId = req.user._id;
     
     try {
         const user = await User.findById(userId);
         const meetings = user.meetings;
         
         for (let i = 0; i < deleted.length; i++) {
-            await Meeting.findByIdAndDelete(deleted[i]);
             meetings.splice(meetings.indexOf(deleted[i]), 1);
             await User.findByIdAndUpdate(userId, { meetings: meetings });
+            await Meeting.findByIdAndUpdate(deleted[i], { $pull: { members: userId } });
+            
+            const meeting = await Meeting.findById(deleted[i]);
+            if (meeting.members.length < 1) {
+                await Meeting.findByIdAndDelete(deleted[i]);
+                await Script.deleteOne({ meetingId: deleted[i] });
+                await Report.deleteOne({ meetingId: deleted[i] });
+            }
         }
 
         res.send('success');

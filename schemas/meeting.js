@@ -33,6 +33,11 @@ const meetingSchema = new Schema({
         required: true,
         ref: 'User'
     }],
+    visited: [{
+        type: ObjectId,
+        required: true,
+        ref: 'User'
+    }],
     ongoing: {
         type: Boolean,
         required: true,

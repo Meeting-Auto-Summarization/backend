@@ -52,7 +52,7 @@ exports.postCreateMeeting = async (req, res, next) => {
         });
         await Meeting.findByIdAndUpdate(//회의 참여자 목록에 호스트 id추가
             meeting._id,
-            { $push: { members: req.user._id } });
+            { $push: { members: req.user._id, visited: req.user._id } });
         res.send(code);
     } catch (err) {
         console.error(err);
@@ -79,7 +79,7 @@ exports.joinMeeting = async (req, res, next) => {
 
                 await Meeting.findOneAndUpdate(
                     { code: req.params.code },
-                    { $addToSet: { members: req.user._id } }
+                    { $addToSet: { members: req.user._id, visited: req.user._id } }
                 );
 
                 res.send(true);
@@ -88,6 +88,20 @@ exports.joinMeeting = async (req, res, next) => {
                 next(error);
             }
         }
+    } catch (err) {
+        console.error(err);
+        next(err);
+    }
+}
+
+exports.exitMeeting = async (req, res, next) => {
+    try {
+        await Meeting.findByIdAndUpdate(
+            req.user.currentMeetingId,
+            { $pull: { members: req.user._id } }
+        )
+
+        res.send('success');
     } catch (err) {
         console.error(err);
         next(err);
@@ -141,8 +155,8 @@ exports.getMeetingList = async (req, res, next) => {
             let membersName = [];
 
             //위에서 받아온 하나의 회의에 대한 참여자 목록 받아옴
-            for (let j = 0; j < meeting.members.length; j++) {
-                const mem = await User.findById(meeting.members[j]);
+            for (let j = 0; j < meeting.visited.length; j++) {
+                const mem = await User.findById(meeting.visited[j]);
                 membersName.push(mem.name);
             }
 
@@ -327,7 +341,7 @@ exports.getMeetingResult = async (req, res, next) => {
         const script = await Script.findOne({ meetingId: meetingId });
         const report = await Report.findOne({ meetingId: meetingId });
 
-        const members = meeting.members;
+        const members = meeting.visited;
         const users = []
 
         for (var i = 0; i < members.length; i++) {

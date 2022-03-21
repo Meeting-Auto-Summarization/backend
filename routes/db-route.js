@@ -14,6 +14,9 @@ router.post('/createMeeting', isLogin, DBController.postCreateMeeting); // 회�
 router.get('/joinMeeting/:code', isLogin, DBController.joinMeeting); // 회의 참여
 // 게스트 id 참여자 목록에 추가됨
 
+// 회의 나가기
+router.get('/exitMeeting', isLogin, DBController.exitMeeting);
+
 // 회의 삭제
 router.post('/deleteMeeting', isLogin, DBController.deleteMeeting); // 회의 삭제
 

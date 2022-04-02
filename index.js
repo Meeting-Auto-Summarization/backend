@@ -215,7 +215,9 @@ io.on("connection", (socket) => {//특정 브라우저와 연결이 됨
         console.log(userNick + "join");
         // io.sockets.adapter.rooms.clear()
         socket.join(roomName);
-        socket.to(roomName).emit('user-connected', userName, userNick);
+        socket.on("ready",()=>{
+            socket.to(roomName).emit('user-connected', userName, userNick);
+        })
         socket["userNick"] = userNick;
         socket["roomName"] = roomName;
         console.log(socket.id);
@@ -366,3 +368,16 @@ function calTime(meetingTime) {
 
     return parseInt(elapsedTime);
 }
+
+//peerServer
+var ExpressPeerServer = require('peer').ExpressPeerServer;
+var peerExpress = require('express');
+var peerApp = peerExpress();
+var peerServer = require('http').createServer(peerApp);
+var options = { debug: true }
+var peerPort = 3002;
+
+peerApp.use('/peerjs',ExpressPeerServer(peerServer,options));
+peerServer.listen(peerPort,()=>{
+    console.log('peerServer listen '+peerPort);
+})

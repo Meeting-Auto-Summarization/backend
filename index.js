@@ -370,12 +370,15 @@ function calTime(meetingTime) {
 }
 
 //peerServer
-var ExpressPeerServer = require('peer').ExpressPeerServer;
-var peerExpress = require('express');
-var peerApp = peerExpress();
-var peerServer = require('http').createServer(peerApp);
-var options = { debug: true }
-var peerPort = 3002;
+const ExpressPeerServer = require('peer').ExpressPeerServer;
+const peerExpress = require('express');
+const peerApp = peerExpress();
+const peerServer = require(`https`).createServer({
+    cert: fs.readFileSync('/etc/nginx/certificate/nginx-certificate.crt'),
+    key: fs.readFileSync('/etc/nginx/certificate/nginx.key'),
+  }, peerApp);
+const options = { debug: true }
+const peerPort = 3002;
 
 peerApp.use('/peerjs',ExpressPeerServer(peerServer,options));
 peerServer.listen(peerPort,()=>{

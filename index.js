@@ -309,7 +309,7 @@ const recordingStart = (id, userNick, createMeetingTime, roomName, device) => {
             recordProgram: 'rec', // Try also "arecord" or "sox"
             endOnSilence: false,
             device: device,
-            slience: 0.5,
+            silence: 0.5,
         });
     } else {
         recording = recorder.record({
@@ -319,7 +319,7 @@ const recordingStart = (id, userNick, createMeetingTime, roomName, device) => {
             verbose: false,
             recordProgram: 'rec', // Try also "arecord" or "sox"
             endOnSilence: false,
-            slience: 0.5,
+            silence: 0.5,
         });
     }
 

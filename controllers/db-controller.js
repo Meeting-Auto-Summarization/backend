@@ -4,6 +4,7 @@ const User = require('../schemas/user');
 const Meeting = require('../schemas/meeting');
 const Script = require('../schemas/script');
 const Report = require('../schemas/report');
+var fs = require('fs').promises;
 
 //회의 생성
 exports.postCreateMeeting = async (req, res, next) => {
@@ -51,7 +52,7 @@ exports.postCreateMeeting = async (req, res, next) => {
         });
         await Meeting.findByIdAndUpdate(//회의 참여자 목록에 호스트 id추가
             meeting._id,
-            { $push: { members: req.user._id } });
+            { $push: { members: req.user._id, visited: req.user._id } });
         res.send(code);
     } catch (err) {
         console.error(err);
@@ -71,21 +72,64 @@ exports.joinMeeting = async (req, res, next) => {
                 await User.findOneAndUpdate({
                     id: req.user.id,
                 }, {
-                    $push: { meetings: meeting._id },
+                    $addToSet: { meetings: meeting._id },
                     currentMeetingId: meeting._id,
                     $set: { isMeeting: true },
                 });
-                await Meeting.findOneAndUpdate({
-                    code: req.params.code,
-                }, {
-                    $push: { members: req.user._id },
-                });
+
+                await Meeting.findOneAndUpdate(
+                    { code: req.params.code },
+                    { $addToSet: { members: req.user._id, visited: req.user._id } }
+                );
+
                 res.send(true);
             } catch (error) {
                 console.error(error);
                 next(error);
             }
         }
+    } catch (err) {
+        console.error(err);
+        next(err);
+    }
+}
+
+exports.exitMeeting = async (req, res, next) => {
+    try {
+        await Meeting.findByIdAndUpdate(
+            req.user.currentMeetingId,
+            { $pull: { members: req.user._id } }
+        )
+
+        res.send('success');
+    } catch (err) {
+        console.error(err);
+        next(err);
+    }
+}
+
+exports.deleteMeeting = async (req, res, next) => {
+    const deleted = req.body.deleted;
+    const userId = req.user._id;
+    
+    try {
+        const user = await User.findById(userId);
+        const meetings = user.meetings;
+        
+        for (let i = 0; i < deleted.length; i++) {
+            meetings.splice(meetings.indexOf(deleted[i]), 1);
+            await User.findByIdAndUpdate(userId, { meetings: meetings });
+            await Meeting.findByIdAndUpdate(deleted[i], { $pull: { members: userId } });
+            
+            const meeting = await Meeting.findById(deleted[i]);
+            if (meeting.members.length < 1) {
+                await Meeting.findByIdAndDelete(deleted[i]);
+                await Script.deleteOne({ meetingId: deleted[i] });
+                await Report.deleteOne({ meetingId: deleted[i] });
+            }
+        }
+
+        res.send('success');
     } catch (err) {
         console.error(err);
         next(err);
@@ -111,8 +155,8 @@ exports.getMeetingList = async (req, res, next) => {
             let membersName = [];
 
             //위에서 받아온 하나의 회의에 대한 참여자 목록 받아옴
-            for (let j = 0; j < meeting.members.length; j++) {
-                const mem = await User.findById(meeting.members[j]);
+            for (let j = 0; j < meeting.visited.length; j++) {
+                const mem = await User.findById(meeting.visited[j]);
                 membersName.push(mem.name);
             }
 
@@ -297,7 +341,7 @@ exports.getMeetingResult = async (req, res, next) => {
         const script = await Script.findOne({ meetingId: meetingId });
         const report = await Report.findOne({ meetingId: meetingId });
 
-        const members = meeting.members;
+        const members = meeting.visited;
         const users = []
 
         for (var i = 0; i < members.length; i++) {

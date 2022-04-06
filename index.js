@@ -431,6 +431,7 @@ function startRecognitionStream(id, userNick, createMeetingTime, roomName, reque
 }
 
 function receiveData(id, roomName, data) {
+    console.log("receive");
     if (rooms[roomName].recognizeStream[id]) {
         rooms[roomName].recognizeStream[id].write(data);
     }

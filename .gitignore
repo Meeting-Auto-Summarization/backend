@@ -3,7 +3,3 @@ node_modules
 
 # credentials
 .env
-
-# model
-.cache
-.venv

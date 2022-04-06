@@ -31,6 +31,13 @@ const meetingSchema = new Schema({
     members: [{
         type: ObjectId,
         required: true,
+        unique: true,
+        ref: 'User'
+    }],
+    visited: [{
+        type: ObjectId,
+        required: true,
+        unique: true,
         ref: 'User'
     }],
     ongoing: {

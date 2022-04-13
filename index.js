@@ -133,8 +133,10 @@ io.on("connection", (socket) => {//특정 브라우저와 연결이 됨
             let id;
             for (let i = 0; i < rooms[roomName].members.length; i++) {
                 id = rooms[roomName].members[i];
+                userNick = rooms[roomName].userNicks[i];
                 //recordingStart(id, socket.userNick, createMeetingTime, roomName, socket.device);
-                startRecognitionStream(id, socket.userNick, createMeetingTime, roomName, request);
+                console.log(id)
+                startRecognitionStream(id, userNick, createMeetingTime, roomName, request);
             }
 
             console.log(socket.id + " : 요약시작")
@@ -254,12 +256,14 @@ io.on("connection", (socket) => {//특정 브라우저와 연결이 됨
                 console.log(socket.id + " : 요약시작")
             }
             rooms[roomName].members.push(socket.id);
+            rooms[roomName].userNicks.push(userNick);
 
         } else {
             rooms[roomName] = {};
             rooms[roomName].isSummary = false;
             rooms[roomName].script = [];
             rooms[roomName].members = [socket.id];
+            rooms[roomName].userNicks = [userNick];
             rooms[roomName].recording = {};
             rooms[roomName].createMeetingTime = createMeetingTime;
             rooms[roomName].hostId = socket.id;
@@ -328,6 +332,64 @@ io.on("connection", (socket) => {//특정 브라우저와 연결이 됨
 
 });
 
+
+/*httpServer.listen(3001, () => {
+    console.log("listne port 3001");
+})*/
+
+
+// const recordingStart = (id, userNick, createMeetingTime, roomName, device) => {
+//     let recording
+//     if (device) {
+//         recording = recorder.record({
+//             sampleRateHertz: 16000,
+//             threshold: 0,
+//             // Other options, see https://www.npmjs.com/package/node-record-lpcm16#options
+//             verbose: false,
+//             recordProgram: 'rec', // Try also "arecord" or "sox"
+//             endOnSilence: false,
+//             device: device,
+//             slience: 0.5,
+//         });
+//     } else {
+//         recording = recorder.record({
+//             sampleRateHertz: 16000,
+//             threshold: 0,
+//             // Other options, see https://www.npmjs.com/package/node-record-lpcm16#options
+//             verbose: false,
+//             recordProgram: 'rec', // Try also "arecord" or "sox"
+//             endOnSilence: false,
+//             slience: 0.5,
+//         });
+//     }
+
+//     const recognizeStream = client
+//         .streamingRecognize(request)
+//         .on('error', console.error)
+//         .on('data', async function (data) {
+//             process.stdout.write(
+//                 data.results[0] && data.results[0].alternatives[0]
+//                     ? `${data.results[0].alternatives[0].transcript}\n`
+//                     : '\n\nReached transcription time limit, press Ctrl+C\n'
+//             );
+//             const time = calTime(createMeetingTime);
+//             io.sockets.in(roomName).emit("msg", userNick, time, data.results[0] && data.results[0].alternatives[0]
+//                 ? `${data.results[0].alternatives[0].transcript}\n`
+//                 : '\n\nReached transcription time limit, press Ctrl+C\n');
+
+
+//             //DB에 발화자와 발화 내용 저장
+//             const content = data.results[0].alternatives[0].transcript;
+//             content.replace('\n', '');
+//             rooms[roomName].script.push({ time: time, isChecked: false, nick: userNick, content: content })
+//         }
+//         );
+//     recording.stream()
+//         .on('error', console.error)
+//         .pipe(recognizeStream);//시작
+
+//     rooms[roomName].recording[id] = recording;
+// }
 httpServer.listen(3001, () => {
     console.log("listen port 3001");
 })
@@ -356,7 +418,7 @@ function startRecognitionStream(id, userNick, createMeetingTime, roomName, reque
             io.sockets.in(roomName).emit("msg", userNick, time, data.results[0] && data.results[0].alternatives[0]
                 ? `${data.results[0].alternatives[0].transcript}\n`
                 : '\n\nReached transcription time limit, press Ctrl+C\n');
-            console.log('data 이벤트 발생');
+            console.log('data 이벤트 발생: ' + userNick);
 
             //DB에 발화자와 발화 내용 저장
             const content = data.results[0].alternatives[0].transcript;
@@ -366,7 +428,7 @@ function startRecognitionStream(id, userNick, createMeetingTime, roomName, reque
 }
 
 function receiveData(id, roomName, data) {
-    console.log("receive");
+    //console.log("receive");
     if (rooms[roomName].recognizeStream[id]) {
         rooms[roomName].recognizeStream[id].write(data);
     }

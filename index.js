@@ -20,7 +20,7 @@ const httpsServer = require(`https`).createServer({
     key: fs.readFileSync('/etc/nginx/certificate/nginx.key'),
 }, app);
 
-const cors = require(`cors`);
+//const cors = require(`cors`);
 const io = require(`socket.io`)(httpsServer, {
     cors: {
         origin: "https://ec2-3-38-49-118.ap-northeast-2.compute.amazonaws.com",
@@ -53,10 +53,10 @@ app.use(session({
     }),
 }));
 
-app.use(cors({
+/*app.use(cors({
     origin: "https://ec2-3-38-49-118.ap-northeast-2.compute.amazonaws.com",
     credentials: true
-}));
+}));*/
 
 app.use(passport.initialize());
 app.use(passport.session());

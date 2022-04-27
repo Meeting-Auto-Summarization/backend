@@ -57,34 +57,21 @@ app.use(passport.session());
 //router 넣는 부분
 app.use('/auth', authRouter);
 app.use('/db', dbRouter);
-app.use('/', (req, res) => {
-    res.send("hello");
-});
-if (process.env.NODE_ENV == 'production') {
-    //배포시
-} else if (process.env.NODE_ENV == 'development') {
-    //개발시
-    app.listen(port, () => {
-        console.log(`running on ${port}`);
-    })
-}
 
-app.use((req, res, next) => {
+
+app.use('/', (req, res, next) => {
+    res.send("hello");
+    next();
+});
+app.use((req, res) => {
     const error = new Error(`${req.method} ${req.url} 라우터가 없습니다.`);
     error.status = 404;
-    next(error);
+    console.log(error);
 });
 
-app.use((err, req, res, next) => {
-    res.locals.message = err.message;
-    res.locals.error = process.env.NODE_ENV !== 'production' ? err : {};
-    res.status(err.status || 500);
-    res.send(err);
-});
-// Imports the Google Cloud client library
+
+// 구글 STT 및 소켓
 const speech = require('@google-cloud/speech');
-
-
 const request = {
     config: {
         encoding: 'LINEAR16',
@@ -155,7 +142,6 @@ io.on("connection", (socket) => {//특정 브라우저와 연결이 됨
 
     socket.on("join-room", async (roomName, userName, userNick) => {
         console.log(userNick + "join");
-        // io.sockets.adapter.rooms.clear()
         socket.join(roomName);
         socket.on("ready", () => {
             socket.to(roomName).emit('user-connected', userName, userNick);
@@ -206,9 +192,6 @@ io.on("connection", (socket) => {//특정 브라우저와 연결이 됨
                     rooms[roomName].recognizeStream[socket.id].end();
                     delete rooms[roomName].recognizeStream[socket.id];
                 }
-                //rooms[roomName].recognizeStream[socket.id] = null;
-
-
                 //recognizeStream 지움
                 rooms[roomName].members = rooms[roomName].members.filter((element) => element !== socket.id);
                 if (rooms[roomName].hostId === socket.id) {
@@ -222,12 +205,6 @@ io.on("connection", (socket) => {//특정 브라우저와 연결이 됨
 
                 }
             }
-
-            /*if (rooms[roomName].members === []) {
-                //
-                delete rooms[roomName];
-            }*/
-
             console.log(rooms);
 
         });
@@ -253,19 +230,14 @@ io.on("connection", (socket) => {//특정 브라우저와 연결이 됨
 
 });
 
-httpServer.listen(3001, () => {
-    console.log("listen port 3001");
-})
-//발화시간 계산 함수
-function calTime(meetingTime) {
+const calTime = (meetingTime) => {//발화시간 계산 함수
     const curTime = new Date();
     const elapsedTime = (curTime.getTime() - meetingTime.getTime()) / 1000;
 
     return parseInt(elapsedTime);
 }
 
-///
-function startRecognitionStream(id, userNick, createMeetingTime, roomName, request) {
+const startRecognitionStream = (id, userNick, createMeetingTime, roomName, request) => {
     // Creates a client
     let client = new speech.SpeechClient();
     rooms[roomName].recognizeStream[id] = client
@@ -286,20 +258,24 @@ function startRecognitionStream(id, userNick, createMeetingTime, roomName, reque
             //DB에 발화자와 발화 내용 저장
             const content = data.results[0].alternatives[0].transcript;
             content.replace('\n', '');
-            if (!(rooms[roomName] === undefined)) {
+            if (rooms[roomName] !== undefined) {
                 rooms[roomName].script.push({ time: time, isChecked: false, nick: userNick, content: content })
             }
         });
 }
 
-function receiveData(id, roomName, data) {
+const receiveData = (id, roomName, data) => {
     console.log("receive");
-    if (!(rooms[roomName] === undefined)) {
+    if (rooms[roomName] !== undefined) {
         if (rooms[roomName].recognizeStream[id]) {
             rooms[roomName].recognizeStream[id].write(data);
         }
     }
 }
+httpServer.listen(3001, () => {
+    console.log("listen port 3001");
+})
+
 //peerServer
 var ExpressPeerServer = require('peer').ExpressPeerServer;
 var peerExpress = require('express');

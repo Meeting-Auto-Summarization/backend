@@ -122,7 +122,7 @@ exports.deleteMeeting = async (req, res, next) => {
             await Meeting.findByIdAndUpdate(deleted[i], { $pull: { members: userId } });
             
             const meeting = await Meeting.findById(deleted[i]);
-            if (meeting.members.length < 1) {
+            if (meeting.visited.length < 1) {
                 await Meeting.findByIdAndDelete(deleted[i]);
                 await Script.deleteOne({ meetingId: deleted[i] });
                 await Report.deleteOne({ meetingId: deleted[i] });

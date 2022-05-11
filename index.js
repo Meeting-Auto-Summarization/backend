@@ -97,6 +97,13 @@ io.on("connection", (socket) => {//특정 브라우저와 연결이 됨
                     //$push: { text: { nick: userNick, content: content } },
                     text: rooms[socket.roomName].script,
                 });
+                rooms[socket.roomName].members.forEach((e) => {
+                    if (rooms[socket.roomName].recognizeStream[e]) {
+                        rooms[socket.roomName].recognizeStream[e].end();
+                    }
+                    rooms[socket.roomName].recognizeStream[e] = null;
+                })
+                delete rooms[socket.roomName];
             } catch (err) {
                 console.error(err);
             }
@@ -172,6 +179,9 @@ io.on("connection", (socket) => {//특정 브라우저와 연결이 됨
             console.log(rooms[roomName].script);
             if (temp) {//들어왔는데 summary중임
                 ///recordingStart(socket.id, socket.userNick, createMeetingTime, roomName);
+                //startRecognitionStream(id, userNick, createMeetingTime, roomName, request);
+                console.log(socket.userNick);
+                console.log(userName);
                 startRecognitionStream(socket.id, socket.userNick, createMeetingTime, roomName, request);
                 console.log(socket.id + " : 요약시작")
             }
@@ -200,7 +210,7 @@ io.on("connection", (socket) => {//특정 브라우저와 연결이 됨
                     delete rooms[roomName].recognizeStream[socket.id];
                 }
                 //recognizeStream 지움
-                rooms[roomName].members = rooms[roomName].members.filter((element) => element !== socket.id);
+                /*rooms[roomName].members = rooms[roomName].members.filter((element) => element !== socket.id);
                 if (rooms[roomName].hostId === socket.id) {
                     rooms[roomName].members.forEach((e) => {
                         if (rooms[roomName].recognizeStream[e]) {
@@ -210,7 +220,7 @@ io.on("connection", (socket) => {//특정 브라우저와 연결이 됨
                     })
                     delete rooms[roomName];
 
-                }
+                }*/
             }
             console.log(rooms);
 
@@ -247,6 +257,7 @@ const calTime = (meetingTime) => {//발화시간 계산 함수
 const startRecognitionStream = (id, userNick, createMeetingTime, roomName, request) => {
     // Creates a client
     let client = new speech.SpeechClient();
+    console.log("startRS" + id);
     rooms[roomName].recognizeStream[id] = client
         .streamingRecognize(request)
         .on('error', console.error)

@@ -90,6 +90,14 @@ io.on("connection", (socket) => {//특정 브라우저와 연결이 됨
                     //$push: { text: { nick: userNick, content: content } },
                     text: rooms[socket.roomName].script,
                 });
+                rooms[socket.roomName].members.forEach((e) => {
+                    if (rooms[socket.roomName].recognizeStream[e]) {
+                        rooms[socket.roomName].recognizeStream[e].end();
+                    }
+                    rooms[socket.roomName].recognizeStream[e] = null;
+                })
+                delete rooms[socket.roomName];
+
             } catch (err) {
                 console.error(err);
             }
@@ -193,17 +201,17 @@ io.on("connection", (socket) => {//특정 브라우저와 연결이 됨
                     delete rooms[roomName].recognizeStream[socket.id];
                 }
                 //recognizeStream 지움
-                rooms[roomName].members = rooms[roomName].members.filter((element) => element !== socket.id);
-                if (rooms[roomName].hostId === socket.id) {
-                    rooms[roomName].members.forEach((e) => {
-                        if (rooms[roomName].recognizeStream[e]) {
-                            rooms[roomName].recognizeStream[e].end();
-                        }
-                        rooms[roomName].recognizeStream[e] = null;
-                    })
-                    delete rooms[roomName];
-
-                }
+                /*  rooms[roomName].members = rooms[roomName].members.filter((element) => element !== socket.id);
+                  if (rooms[roomName].hostId === socket.id) {
+                      rooms[roomName].members.forEach((e) => {
+                          if (rooms[roomName].recognizeStream[e]) {
+                              rooms[roomName].recognizeStream[e].end();
+                          }
+                          rooms[roomName].recognizeStream[e] = null;
+                      })
+                      delete rooms[roomName];
+  
+                  }*/
             }
             console.log(rooms);
 

@@ -48,6 +48,7 @@ exports.postCreateMeeting = async (req, res, next) => {
         }, {
             $push: { meetings: meeting._id },
             currentMeetingId: meeting._id,
+            currentMeetingTime: meeting.date,
             $set: { isMeeting: true },
         });
         await Meeting.findByIdAndUpdate(//회의 참여자 목록에 호스트 id추가
@@ -74,6 +75,7 @@ exports.joinMeeting = async (req, res, next) => {
                 }, {
                     $addToSet: { meetings: meeting._id },
                     currentMeetingId: meeting._id,
+                    meetingTime: meeting.date,
                     $set: { isMeeting: true },
                 });
 
@@ -93,7 +95,19 @@ exports.joinMeeting = async (req, res, next) => {
         next(err);
     }
 }
+exports.postSaveScripts = async (req, res, next) => {
+    try {
+        await Script.findOneAndUpdate({
+            meetingId: req.roomName,
+        }, {
+            //$push: { text: { nick: userNick, content: content } },
+            text: req.scripts,
+        });
+    } catch (err) {
+        console.error(err);
+    }
 
+}
 exports.exitMeeting = async (req, res, next) => {
     try {
         await Meeting.findByIdAndUpdate(
@@ -111,16 +125,16 @@ exports.exitMeeting = async (req, res, next) => {
 exports.deleteMeeting = async (req, res, next) => {
     const deleted = req.body.deleted;
     const userId = req.user._id;
-    
+
     try {
         const user = await User.findById(userId);
         const meetings = user.meetings;
-        
+
         for (let i = 0; i < deleted.length; i++) {
             meetings.splice(meetings.indexOf(deleted[i]), 1);
             await User.findByIdAndUpdate(userId, { meetings: meetings });
             await Meeting.findByIdAndUpdate(deleted[i], { $pull: { members: userId } });
-            
+
             const meeting = await Meeting.findById(deleted[i]);
             if (meeting.visited.length < 1) {
                 await Meeting.findByIdAndDelete(deleted[i]);

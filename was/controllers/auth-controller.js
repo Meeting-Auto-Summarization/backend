@@ -7,11 +7,11 @@ exports.getUserInfo = (req, res) => {
 }
 
 exports.getUserMeetingInfo = (req, res) => {
-    const { currentMeetingId, name } = req.user;
-    console.log(currentMeetingId, name);
+    const { currentMeetingId, name, currentMeetingTime } = req.user;
     res.send({
         currentMeetingId: currentMeetingId,
         name: name,
+        currentMeetingTime: currentMeetingTime
     });
 }
 exports.getLogout = (req, res) => {

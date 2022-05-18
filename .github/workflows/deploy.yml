@@ -32,5 +32,9 @@ jobs:
             cd /home/${{ secrets.DIR }}/mas/backend
             git fetch
             git pull origin deploy
+            cd ./was
             npm i
             pm2 reload mas_server
+            cd ../socket-signaling-server
+            npm i
+            pm2 reload mas_socket_server

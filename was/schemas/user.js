@@ -34,6 +34,10 @@ const userSchema = new Schema({
         type: ObjectId,
         ref: 'Meeting'
     },
+    currentMeetingTime: {
+        type: Date,
+        default: Date.now,
+    },
     meetings: [{
         type: ObjectId,
         ref: 'Meeting'

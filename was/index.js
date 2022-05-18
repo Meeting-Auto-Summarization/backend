@@ -7,7 +7,7 @@ const passportConfig = require('./passport');
 const connect = require('./schemas');
 const MongoStore = require('connect-mongo');
 const path = require(`path`);//내장모듈
-
+const fs = require(`fs`);
 const app = express();
 const httpsServer = require(`https`).createServer({
     cert: fs.readFileSync('/etc/nginx/certificate/nginx-certificate.crt'),

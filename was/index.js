@@ -15,7 +15,7 @@ const cors = require(`cors`);
 
 app.set('port', process.env.PORT || 8001);
 
-require(`dotenv`).config({ path: path.join(__dirname, `./credentials/.env`) })
+require(`dotenv`).config({ path: path.join(__dirname, `../credentials/.env`) })
 
 const authRouter = require('./routes/auth-route');
 const dbRouter = require('./routes/db-route');

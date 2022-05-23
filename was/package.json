@@ -18,7 +18,6 @@
   },
   "homepage": "https://github.com/Meeting-Auto-Summarization/backend#readme",
   "dependencies": {
-    "@google-cloud/speech": "^4.10.0",
     "child-process": "^1.0.2",
     "connect-mongo": "^4.6.0",
     "cookie-parser": "^1.4.6",
@@ -31,9 +30,7 @@
     "node-record-lpcm16": "^1.0.1",
     "passport": "^0.5.2",
     "passport-google-oauth2": "^0.2.0",
-    "peer": "^0.6.1",
-    "socket.io": "^4.4.1",
-    "sox": "^0.1.0"
+    "socket.io": "^4.4.1"
   },
   "devDependencies": {
     "morgan": "^1.10.0",

@@ -1,28 +1,33 @@
-const ExpressPeerServer = require('peer').ExpressPeerServer;
 const express = require('express');
 const app = express();
 const morgan = require('morgan');
 const fs = require(`fs`);
-const peerServer = require(`https`).createServer({
+const socketServer = require(`https`).createServer({
     cert: fs.readFileSync('/etc/nginx/certificate/nginx-certificate.crt'),
     key: fs.readFileSync('/etc/nginx/certificate/nginx.key'),
 }, app);
-const options = { debug: true }
-const peerPort = 3002;
-const io = require(`socket.io`)(peerServer, {
+
+const socketPort = 3002;
+const io = require(`socket.io`)(socketServer, {
     cors: {
         origin: "https://ec2-3-38-49-118.ap-northeast-2.compute.amazonaws.com",
         credentials: true
     }
 });
+
+const redis = require(`socket.io-redis`);
+io.adapter(redis({
+    host: 'localhost',
+    port: 6379
+}))
 let rooms = {};
 
 app.use(morgan('dev'));
 
 
-
 // 구글 STT 및 소켓
 const speech = require('@google-cloud/speech');
+const { isPromise } = require('util/types');
 const request = {
     config: {
         encoding: 'LINEAR16',
@@ -204,8 +209,7 @@ io.on("connection", (socket) => {//특정 브라우저와 연결이 됨
 
 });
 
-app.use('/peerjs', ExpressPeerServer(peerServer, options));
 
-peerServer.listen(peerPort, () => {
-    console.log('peerServer listen ' + peerPort);
+socketServer.listen(socketPort, () => {
+    console.log('socketServer listen ' + socketPort);
 });

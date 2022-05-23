@@ -38,3 +38,6 @@ jobs:
             cd ../socket-signaling-server
             npm i
             pm2 reload mas_socket_server
+            cd ../peerserver
+            npm i
+            pm2 reload mas_peer_server

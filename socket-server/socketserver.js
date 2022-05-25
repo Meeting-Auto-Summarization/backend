@@ -22,7 +22,6 @@ app.use(morgan('dev'));
 
 // 구글 STT 및 소켓
 const speech = require('@google-cloud/speech');
-const { isPromise } = require('util/types');
 const request = {
     config: {
         encoding: 'LINEAR16',
@@ -178,6 +177,13 @@ io.on("connection", (socket) => {//특정 브라우저와 연결이 됨
                     rooms[roomName].recognizeStream[socket.id].end();
                     delete rooms[roomName].recognizeStream[socket.id];
                 }
+                console.log(socket.id + " " + userNick);
+                rooms[roomName].members = rooms[roomName].members.filter(e => {
+                    return e !== socket.id;
+                });
+                rooms[roomName].userNicks = rooms[roomName].members.filter(e => {
+                    return e !== userNick;
+                });
             }
             console.log(rooms);
 

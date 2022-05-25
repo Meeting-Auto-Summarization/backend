@@ -181,7 +181,7 @@ io.on("connection", (socket) => {//특정 브라우저와 연결이 됨
                 rooms[roomName].members = rooms[roomName].members.filter(e => {
                     return e !== socket.id;
                 });
-                rooms[roomName].userNicks = rooms[roomName].members.filter(e => {
+                rooms[roomName].userNicks = rooms[roomName].userNicks.filter(e => {
                     return e !== userNick;
                 });
             }

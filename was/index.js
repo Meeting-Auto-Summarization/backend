@@ -9,11 +9,11 @@ const MongoStore = require('connect-mongo');
 const path = require(`path`);//내장모듈
 const fs = require(`fs`);
 const app = express();
-const httpsServer = require(`https`).createServer({
+/*const httpsServer = require(`https`).createServer({
     cert: fs.readFileSync('/etc/nginx/certificate/nginx-certificate.crt'),
     key: fs.readFileSync('/etc/nginx/certificate/nginx.key'),
-}, app);
-
+}, app);*/
+const httpServer = require(`http`).createServer(app);
 
 app.set('port', process.env.PORT || 8001);
 
@@ -58,7 +58,6 @@ app.use((req, res) => {
     console.log(error);
 });
 
-httpsServer.listen(3001, () => {
+httpServer.listen(3001, () => {
     console.log("listen port 3001");
 })
-

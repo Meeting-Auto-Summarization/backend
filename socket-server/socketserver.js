@@ -1,16 +1,12 @@
 const express = require('express');
 const app = express();
 const morgan = require('morgan');
-const fs = require(`fs`);
-const socketServer = require(`https`).createServer({
-    cert: fs.readFileSync('/etc/nginx/certificate/nginx-certificate.crt'),
-    key: fs.readFileSync('/etc/nginx/certificate/nginx.key'),
-}, app);
+const socketServer = require(`http`).createServer(app);
 
 const socketPort = 3002;
 const io = require(`socket.io`)(socketServer, {
     cors: {
-        origin: "https://ec2-3-38-49-118.ap-northeast-2.compute.amazonaws.com",
+        origin: "http://localhost:3001",
         credentials: true
     }
 });

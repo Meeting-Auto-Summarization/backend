@@ -2,10 +2,11 @@ const ExpressPeerServer = require('peer').ExpressPeerServer;
 const express = require('express');
 const app = express();
 const fs = require(`fs`);
-const peerServer = require(`https`).createServer({
+/*const peerServer = require(`https`).createServer({
     cert: fs.readFileSync('/etc/nginx/certificate/nginx-certificate.crt'),
     key: fs.readFileSync('/etc/nginx/certificate/nginx.key'),
-}, app);
+}, app);*/
+const peerServer = require(`https`).createServer(app);
 const options = { debug: true }
 const peerPort = 3003;
 

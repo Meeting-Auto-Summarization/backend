@@ -10,7 +10,13 @@ const io = require(`socket.io`)(socketServer, {
         credentials: true
     }
 });
+const { createAdapter } = require("@socket.io/redis-adapter");
+const { createClient } =require("redis");
 
+const pubClient = createClient({ url: "redis://localhost:6379" });
+const subClient = pubClient.duplicate();
+subClient.subscribe("new_room");
+io.adapter(createAdapter(pubClient,subClient));
 let rooms = {};
 
 app.use(morgan('dev'));
@@ -127,6 +133,28 @@ io.on("connection", (socket) => {//특정 브라우저와 연결이 됨
         receiveData(socket.id, roomName, data);
     });
 
+    subClient.on("message",(channel,msg)=>{//roominfo
+        console.log(msg);
+        if(channel=="new_room"){
+        const roomInfo=JSON.parse(msg);
+        const roomName=roomInfo.roomName;
+        const hostId=roomInfo.hostId;
+        const createMeetingTime=roomInfo.createMeetingTime;
+        if(rooms[roomName]===undefined){
+            //host,createMeetingTime만있으면될듯
+            rooms[roomName] = {};
+            rooms[roomName].isSummary = false;
+            rooms[roomName].script = [];
+            rooms[roomName].members = [];
+            rooms[roomName].userNicks = [];
+            //rooms[roomName].recording = {};
+            rooms[roomName].createMeetingTime = createMeetingTime ;
+            rooms[roomName].hostId = hostId;
+            rooms[roomName].recognizeStream = {};
+            console.log(rooms);
+        }
+    }
+    })
     socket.on("join-room", async (roomName, userName, userNick, currentMeetingTime) => {
         console.log(userNick + "join");
         socket.join(roomName);
@@ -137,7 +165,7 @@ io.on("connection", (socket) => {//특정 브라우저와 연결이 됨
         socket["roomName"] = roomName;
         console.log(socket.id);
         console.log(rooms);
-
+    
         if (rooms[roomName]) {
             //summaryflag값전달
             const temp = rooms[roomName].isSummary;
@@ -153,6 +181,7 @@ io.on("connection", (socket) => {//특정 브라우저와 연결이 됨
             rooms[roomName].userNicks.push(userNick);
 
         } else {
+            pubClient.publish("new_room",JSON.stringify({roomName:roomName,hostId:socket.id,createMeetingTime:currentMeetingTime}))
             rooms[roomName] = {};
             rooms[roomName].isSummary = false;
             rooms[roomName].script = [];
@@ -205,8 +234,13 @@ io.on("connection", (socket) => {//특정 브라우저와 연결이 됨
     });
 
 });
+pubClient.on('disconnect',()=>{
+    pubClient.quit();
+})
 
-
+subClient.on('disconnect',()=>{
+    subClient.quit();
+})
 socketServer.listen(socketPort, () => {
     console.log('socketServer listen ' + socketPort);
 });

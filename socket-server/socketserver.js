@@ -1,20 +1,31 @@
 const express = require('express');
 const app = express();
 const morgan = require('morgan');
-const socketServer = require(`http`).createServer(app);
+const fs = require(`fs`);
+const socketServer = require(`https`).createServer({
+    cert: fs.readFileSync('/etc/nginx/certificate/nginx-certificate.crt'),
+    key: fs.readFileSync('/etc/nginx/certificate/nginx.key'),
+}, app);
+
+const { createAdapter } = require("@socket.io/redis-adapter");
+const { createClient } =require("redis");
+
+const pubClient = createClient({ url: "redis://localhost:6379" });
+const subClient = pubClient.duplicate();
 
 const socketPort = 3002;
-const io = require(`socket.io`)(socketServer, {
-    cors: {
-        origin: "http://localhost:3001",
-        credentials: true
-    }
-});
 
 let rooms = {};
 
 app.use(morgan('dev'));
 
+const io = require(`socket.io`)(socketServer, {
+    cors: {
+        origin: "https://ec2-3-38-49-118.ap-northeast-2.compute.amazonaws.com",
+        credentials: true
+    }
+});
+io.adapter(createAdapter(pubClient,subClient));
 
 // 구글 STT 및 소켓
 const speech = require('@google-cloud/speech');

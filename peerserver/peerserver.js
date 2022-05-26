@@ -6,7 +6,7 @@ const fs = require(`fs`);
     cert: fs.readFileSync('/etc/nginx/certificate/nginx-certificate.crt'),
     key: fs.readFileSync('/etc/nginx/certificate/nginx.key'),
 }, app);*/
-const peerServer = require(`https`).createServer(app);
+const peerServer = require(`http`).createServer(app);
 const options = { debug: true }
 const peerPort = 3003;
 

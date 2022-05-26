@@ -6,7 +6,7 @@ const socketServer = require(`http`).createServer(app);
 const socketPort = 3002;
 const io = require(`socket.io`)(socketServer, {
     cors: {
-        origin: "http://localhost:3001",
+        origin: "http://localhost:3000",
         credentials: true
     }
 });

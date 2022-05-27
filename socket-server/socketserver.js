@@ -12,10 +12,88 @@ const { createClient } =require("redis");
 
 const socketPort = 3002;
 
-const pubClient = createClient({ url: "redis://localhost:6379" });
+const pubClient = createClient({ host: '127.0.0.1', port: 6379 });
 const subClient = pubClient.duplicate();
+const { Emitter } =require("@socket.io/redis-emitter");
+const emitter = new Emitter(pubClient);
 
 subClient.subscribe("new_room");
+subClient.subscribe("new_message");
+subClient.subscribe("summaryAlert");
+subClient.subscribe("checkChange");
+subClient.subscribe("checkOtherRoom");
+subClient.subscribe("backupOtherRoom");
+subClient.on("message",(channel,msg)=>{//roominfo
+    if(channel==="checkOtherRoom"){
+        if(rooms!=={}&&JSON.parse(msg)=={}){
+            pubClient.publish("backupOtherRoom",rooms);
+        }
+    }else if(channel==="backupOtherRoom"){
+        if(rooms==={}){
+            for (const [key,value] of  Object.entries(JSON.parse(rooms))) {
+                rooms[key]=value;
+                rooms[key].members = [];
+                rooms[key].userNicks = [];
+                rooms[key].recognizeStream = {};
+              }
+        }
+    }
+});
+subClient.on("message",(channel,msg)=>{//roominfo
+    console.log(channel);
+    if(channel==="new_room"){
+    const{roomName,roomInfo}=JSON.parse(msg);
+    const hostId=roomInfo.hostId;
+    const createMeetingTime=roomInfo.createMeetingTime;
+    if(rooms[roomName]===undefined){
+        //host,createMeetingTime만있으면될듯
+        rooms[roomName] = {};
+        rooms[roomName].isSummary = false;
+        rooms[roomName].script = [];
+        rooms[roomName].members = [];
+        rooms[roomName].userNicks = [];
+        rooms[roomName].createMeetingTime = createMeetingTime ;
+        rooms[roomName].hostId = hostId;
+        rooms[roomName].recognizeStream = {};
+                    console.log(rooms);
+    }
+} else if(channel==="new_message"){
+        const {roomName,script}=JSON.parse(msg);
+        console.log("새메시지 :"+script.time);
+        rooms[roomName].script.push(script);
+        console.log(rooms[roomName].script);   
+
+}else if(channel==="summaryAlert"){
+    const {roomName,state}=JSON.parse(msg);
+    if(state!==rooms[roomName].isSummary){
+        rooms[roomName].isSummary=state;
+        if (state) {
+            for (let i = 0; i < rooms[roomName].members.length; i++) {
+                const id = rooms[roomName].members[i];
+                const userNick = rooms[roomName].userNicks[i];
+                startRecognitionStream(id, userNick, rooms[roomName].createMeetingTime, roomName, request);
+            }
+            console.log("다른 서버 요약시작");
+        } else {
+            for (let i = 0; i < rooms[roomName].members.length; i++) {
+                const id = rooms[roomName].members[i];
+                if (rooms[roomName].recognizeStream[id]) {
+                    rooms[roomName].recognizeStream[id].end();
+                }
+                rooms[roomName].recognizeStream[id] = null;
+            }
+            console.log("다른 서버 요약중지");
+        }     
+    }
+}else if(channel==="checkChange"){
+    const {roomName,index,isChecked}=JSON.parse(msg);
+    if(rooms[roomName].script[index].isChecked !==isChecked){
+        rooms[roomName].script[index].isChecked =isChecked;
+    }
+}
+console.log(rooms);
+});
+
 
 let rooms = {};
 
@@ -59,16 +137,19 @@ const startRecognitionStream = (id, userNick, createMeetingTime, roomName, reque
                     : '\n\nReached transcription time limit, press Ctrl+C\n'
             );
             const time = calTime(new Date(createMeetingTime));
-            io.sockets.in(roomName).emit("msg", userNick, time, data.results[0] && data.results[0].alternatives[0]
+            /*io.to(roomName).emit("msg", userNick, time, data.results[0] && data.results[0].alternatives[0]
                 ? `${data.results[0].alternatives[0].transcript}\n`
                 : '\n\nReached transcription time limit, press Ctrl+C\n');
-            console.log('data 이벤트 발생: ' + userNick);
-
+            console.log('data 이벤트 발생: ' + userNick);*/
+      emitter.to(roomName).emit("msg", userNick, time, data.results[0] && data.results[0].alternatives[0]
+            ? `${data.results[0].alternatives[0].transcript}\n`
+            : '\n\nReached transcription time limit, press Ctrl+C\n');
+        console.log('data 이벤트 발생: ' + userNick);
             //DB에 발화자와 발화 내용 저장
             const content = data.results[0].alternatives[0].transcript;
             content.replace('\n', '');
             if (rooms[roomName] !== undefined) {
-                rooms[roomName].script.push({ time: time, isChecked: false, nick: userNick, content: content })
+  pubClient.publish("new_message",JSON.stringify({ roomName:roomName,len:rooms[roomName].script.length,script:{time: time, isChecked: false, nick: userNick, content: content }}));
             }
         });
 }
@@ -82,6 +163,7 @@ const receiveData = (id, roomName, data) => {
 }
 
 io.on("connection", (socket) => {//특정 브라우저와 연결이 됨
+    console.log(io.sockets.adapter.rooms);
     socket.on("meetingEnd", async (isHost) => {
         try {
             rooms[socket.roomName].members.forEach((e) => {
@@ -98,7 +180,7 @@ io.on("connection", (socket) => {//특정 브라우저와 연결이 됨
     });
     socket.on("summaryAlert", async (summaryFlag) => {
         const roomName = socket.roomName;
-        io.sockets.in(roomName).emit("summaryOffer", summaryFlag);
+        io.to(roomName).emit("summaryOffer", summaryFlag);
         rooms[roomName].isSummary = summaryFlag;
         console.log(socket.id);
         console.log(rooms[roomName].members);
@@ -132,6 +214,7 @@ io.on("connection", (socket) => {//특정 브라우저와 연결이 됨
             }
             console.log(socket.id + " : 요약중지");
         }
+          pubClient.publish("summaryAlert",JSON.stringify({roomName:roomName,state:summaryFlag}));
     })
 
     ///
@@ -140,31 +223,10 @@ io.on("connection", (socket) => {//특정 브라우저와 연결이 됨
         receiveData(socket.id, roomName, data);
     });
 
-    subClient.on("message",(channel,msg)=>{//roominfo
-        console.log(msg);
-        if(channel=="new_room"){
-        const roomInfo=JSON.parse(msg);
-        const roomName=roomInfo.roomName;
-        const hostId=roomInfo.hostId;
-        const createMeetingTime=roomInfo.createMeetingTime;
-        if(rooms[roomName]===undefined){
-            //host,createMeetingTime만있으면될듯
-            rooms[roomName] = {};
-            rooms[roomName].isSummary = false;
-            rooms[roomName].script = [];
-            rooms[roomName].members = [];
-            rooms[roomName].userNicks = [];
-            //rooms[roomName].recording = {};
-            rooms[roomName].createMeetingTime = createMeetingTime ;
-            rooms[roomName].hostId = hostId;
-            rooms[roomName].recognizeStream = {};
-            console.log(rooms);
-        }
-    }
-    })
     socket.on("join-room", async (roomName, userName, userNick, currentMeetingTime) => {
         console.log(userNick + "join");
         socket.join(roomName);
+        console.log(io.sockets.adapter.rooms);
         socket.on("ready", () => {
             socket.to(roomName).emit('user-connected', userName, userNick);
         })
@@ -188,7 +250,7 @@ io.on("connection", (socket) => {//특정 브라우저와 연결이 됨
             rooms[roomName].userNicks.push(userNick);
 
         } else {
-            pubClient.publish("new_room",JSON.stringify({roomName:roomName,hostId:socket.id,createMeetingTime:currentMeetingTime}))
+             pubClient.publish("new_room",JSON.stringify({roomName:roomName,roomInfo:{hostId:socket.id,createMeetingTime:currentMeetingTime}}))
             rooms[roomName] = {};
             rooms[roomName].isSummary = false;
             rooms[roomName].script = [];
@@ -236,18 +298,18 @@ io.on("connection", (socket) => {//특정 브라우저와 연결이 됨
     socket.on("handleCheck", (index, isChecked) => {
         rooms[socket.roomName].script[index].isChecked = isChecked
         console.log("handleCheck : " + index);
-        io.sockets.to(socket.roomName).emit("checkChange", rooms[socket.roomName].script);
-        console.log(rooms[socket.roomName].script);
+        io.to(socket.roomName).emit("checkChange", rooms[socket.roomName].script);
+  pubClient.publish("checkChange",JSON.stringify({roomName:socket.roomName,index:index,isChecked:isChecked}));
     });
 
 });
-pubClient.on('disconnect',()=>{
+/*pubClient.on('disconnect',()=>{
     pubClient.quit();
 })
 
 subClient.on('disconnect',()=>{
     subClient.quit();
-})
+})*/
 socketServer.listen(socketPort, () => {
     console.log('socketServer listen ' + socketPort);
 });

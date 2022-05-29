@@ -8,13 +8,13 @@ const socketServer = require(`https`).createServer({
 }, app);
 
 const { createAdapter } = require("@socket.io/redis-adapter");
-const { createClient } =require("redis");
+const { createClient } = require("redis");
 
-const socketPort = 3002;
+const socketPort = process.env.PORT || 3002;
 
 const pubClient = createClient({ host: '127.0.0.1', port: 6379 });
 const subClient = pubClient.duplicate();
-const { Emitter } =require("@socket.io/redis-emitter");
+const { Emitter } = require("@socket.io/redis-emitter");
 const emitter = new Emitter(pubClient);
 
 subClient.subscribe("new_room");
@@ -23,75 +23,75 @@ subClient.subscribe("summaryAlert");
 subClient.subscribe("checkChange");
 subClient.subscribe("checkOtherRoom");
 subClient.subscribe("backupOtherRoom");
-subClient.on("message",(channel,msg)=>{//roominfo
-    if(channel==="checkOtherRoom"){
-        if(rooms!=={}&&JSON.parse(msg)=={}){
-            pubClient.publish("backupOtherRoom",rooms);
+subClient.on("message", (channel, msg) => {//roominfo
+    if (channel === "checkOtherRoom") {
+        if (rooms !== {} && JSON.parse(msg) == {}) {
+            pubClient.publish("backupOtherRoom", rooms);
         }
-    }else if(channel==="backupOtherRoom"){
-        if(rooms==={}){
-            for (const [key,value] of  Object.entries(JSON.parse(rooms))) {
-                rooms[key]=value;
+    } else if (channel === "backupOtherRoom") {
+        if (rooms === {}) {
+            for (const [key, value] of Object.entries(JSON.parse(rooms))) {
+                rooms[key] = value;
                 rooms[key].members = [];
                 rooms[key].userNicks = [];
                 rooms[key].recognizeStream = {};
-              }
+            }
         }
     }
 });
-subClient.on("message",(channel,msg)=>{//roominfo
+subClient.on("message", (channel, msg) => {//roominfo
     console.log(channel);
-    if(channel==="new_room"){
-    const{roomName,roomInfo}=JSON.parse(msg);
-    const hostId=roomInfo.hostId;
-    const createMeetingTime=roomInfo.createMeetingTime;
-    if(rooms[roomName]===undefined){
-        //host,createMeetingTime만있으면될듯
-        rooms[roomName] = {};
-        rooms[roomName].isSummary = false;
-        rooms[roomName].script = [];
-        rooms[roomName].members = [];
-        rooms[roomName].userNicks = [];
-        rooms[roomName].createMeetingTime = createMeetingTime ;
-        rooms[roomName].hostId = hostId;
-        rooms[roomName].recognizeStream = {};
-                    console.log(rooms);
-    }
-} else if(channel==="new_message"){
-        const {roomName,script}=JSON.parse(msg);
-        console.log("새메시지 :"+script.time);
+    if (channel === "new_room") {
+        const { roomName, roomInfo } = JSON.parse(msg);
+        const hostId = roomInfo.hostId;
+        const createMeetingTime = roomInfo.createMeetingTime;
+        if (rooms[roomName] === undefined) {
+            //host,createMeetingTime만있으면될듯
+            rooms[roomName] = {};
+            rooms[roomName].isSummary = false;
+            rooms[roomName].script = [];
+            rooms[roomName].members = [];
+            rooms[roomName].userNicks = [];
+            rooms[roomName].createMeetingTime = createMeetingTime;
+            rooms[roomName].hostId = hostId;
+            rooms[roomName].recognizeStream = {};
+            console.log(rooms);
+        }
+    } else if (channel === "new_message") {
+        const { roomName, script } = JSON.parse(msg);
+        console.log("새메시지 :" + script.time);
         rooms[roomName].script.push(script);
-        console.log(rooms[roomName].script);   
+        console.log(rooms[roomName].script);
 
-}else if(channel==="summaryAlert"){
-    const {roomName,state}=JSON.parse(msg);
-    if(state!==rooms[roomName].isSummary){
-        rooms[roomName].isSummary=state;
-        if (state) {
-            for (let i = 0; i < rooms[roomName].members.length; i++) {
-                const id = rooms[roomName].members[i];
-                const userNick = rooms[roomName].userNicks[i];
-                startRecognitionStream(id, userNick, rooms[roomName].createMeetingTime, roomName, request);
-            }
-            console.log("다른 서버 요약시작");
-        } else {
-            for (let i = 0; i < rooms[roomName].members.length; i++) {
-                const id = rooms[roomName].members[i];
-                if (rooms[roomName].recognizeStream[id]) {
-                    rooms[roomName].recognizeStream[id].end();
+    } else if (channel === "summaryAlert") {
+        const { roomName, state } = JSON.parse(msg);
+        if (state !== rooms[roomName].isSummary) {
+            rooms[roomName].isSummary = state;
+            if (state) {
+                for (let i = 0; i < rooms[roomName].members.length; i++) {
+                    const id = rooms[roomName].members[i];
+                    const userNick = rooms[roomName].userNicks[i];
+                    startRecognitionStream(id, userNick, rooms[roomName].createMeetingTime, roomName, request);
                 }
-                rooms[roomName].recognizeStream[id] = null;
+                console.log("다른 서버 요약시작");
+            } else {
+                for (let i = 0; i < rooms[roomName].members.length; i++) {
+                    const id = rooms[roomName].members[i];
+                    if (rooms[roomName].recognizeStream[id]) {
+                        rooms[roomName].recognizeStream[id].end();
+                    }
+                    rooms[roomName].recognizeStream[id] = null;
+                }
+                console.log("다른 서버 요약중지");
             }
-            console.log("다른 서버 요약중지");
-        }     
+        }
+    } else if (channel === "checkChange") {
+        const { roomName, index, isChecked } = JSON.parse(msg);
+        if (rooms[roomName].script[index].isChecked !== isChecked) {
+            rooms[roomName].script[index].isChecked = isChecked;
+        }
     }
-}else if(channel==="checkChange"){
-    const {roomName,index,isChecked}=JSON.parse(msg);
-    if(rooms[roomName].script[index].isChecked !==isChecked){
-        rooms[roomName].script[index].isChecked =isChecked;
-    }
-}
-console.log(rooms);
+    console.log(rooms);
 });
 
 
@@ -105,7 +105,7 @@ const io = require(`socket.io`)(socketServer, {
         credentials: true
     }
 });
-io.adapter(createAdapter(pubClient,subClient));
+io.adapter(createAdapter(pubClient, subClient));
 
 // 구글 STT 및 소켓
 const speech = require('@google-cloud/speech');
@@ -141,15 +141,15 @@ const startRecognitionStream = (id, userNick, createMeetingTime, roomName, reque
                 ? `${data.results[0].alternatives[0].transcript}\n`
                 : '\n\nReached transcription time limit, press Ctrl+C\n');
             console.log('data 이벤트 발생: ' + userNick);*/
-      emitter.to(roomName).emit("msg", userNick, time, data.results[0] && data.results[0].alternatives[0]
-            ? `${data.results[0].alternatives[0].transcript}\n`
-            : '\n\nReached transcription time limit, press Ctrl+C\n');
-        console.log('data 이벤트 발생: ' + userNick);
+            emitter.to(roomName).emit("msg", userNick, time, data.results[0] && data.results[0].alternatives[0]
+                ? `${data.results[0].alternatives[0].transcript}\n`
+                : '\n\nReached transcription time limit, press Ctrl+C\n');
+            console.log('data 이벤트 발생: ' + userNick);
             //DB에 발화자와 발화 내용 저장
             const content = data.results[0].alternatives[0].transcript;
             content.replace('\n', '');
             if (rooms[roomName] !== undefined) {
-  pubClient.publish("new_message",JSON.stringify({ roomName:roomName,len:rooms[roomName].script.length,script:{time: time, isChecked: false, nick: userNick, content: content }}));
+                pubClient.publish("new_message", JSON.stringify({ roomName: roomName, len: rooms[roomName].script.length, script: { time: time, isChecked: false, nick: userNick, content: content } }));
             }
         });
 }
@@ -214,7 +214,7 @@ io.on("connection", (socket) => {//특정 브라우저와 연결이 됨
             }
             console.log(socket.id + " : 요약중지");
         }
-          pubClient.publish("summaryAlert",JSON.stringify({roomName:roomName,state:summaryFlag}));
+        pubClient.publish("summaryAlert", JSON.stringify({ roomName: roomName, state: summaryFlag }));
     })
 
     ///
@@ -234,7 +234,7 @@ io.on("connection", (socket) => {//특정 브라우저와 연결이 됨
         socket["roomName"] = roomName;
         console.log(socket.id);
         console.log(rooms);
-    
+
         if (rooms[roomName]) {
             //summaryflag값전달
             const temp = rooms[roomName].isSummary;
@@ -250,7 +250,7 @@ io.on("connection", (socket) => {//특정 브라우저와 연결이 됨
             rooms[roomName].userNicks.push(userNick);
 
         } else {
-             pubClient.publish("new_room",JSON.stringify({roomName:roomName,roomInfo:{hostId:socket.id,createMeetingTime:currentMeetingTime}}))
+            pubClient.publish("new_room", JSON.stringify({ roomName: roomName, roomInfo: { hostId: socket.id, createMeetingTime: currentMeetingTime } }))
             rooms[roomName] = {};
             rooms[roomName].isSummary = false;
             rooms[roomName].script = [];
@@ -299,7 +299,7 @@ io.on("connection", (socket) => {//특정 브라우저와 연결이 됨
         rooms[socket.roomName].script[index].isChecked = isChecked
         console.log("handleCheck : " + index);
         io.to(socket.roomName).emit("checkChange", rooms[socket.roomName].script);
-  pubClient.publish("checkChange",JSON.stringify({roomName:socket.roomName,index:index,isChecked:isChecked}));
+        pubClient.publish("checkChange", JSON.stringify({ roomName: socket.roomName, index: index, isChecked: isChecked }));
     });
 
 });

@@ -34,7 +34,7 @@ subClient.on("message", (channel, msg) => {//roominfo
                 rooms[key] = value;
                 rooms[key].members = [];
                 rooms[key].userNicks = [];
-                rooms[key].recognizeStream = {};
+                //  rooms[key].recognizeStream = {};
             }
         }
     }
@@ -54,7 +54,7 @@ subClient.on("message", (channel, msg) => {//roominfo
             rooms[roomName].userNicks = [];
             rooms[roomName].createMeetingTime = createMeetingTime;
             rooms[roomName].hostId = hostId;
-            rooms[roomName].recognizeStream = {};
+            // rooms[roomName].recognizeStream = {};
             console.log(rooms);
         }
     } else if (channel === "new_message") {
@@ -62,29 +62,9 @@ subClient.on("message", (channel, msg) => {//roominfo
         console.log("새메시지 :" + script.time);
         rooms[roomName].script.push(script);
         console.log(rooms[roomName].script);
-
     } else if (channel === "summaryAlert") {
         const { roomName, state } = JSON.parse(msg);
-        if (state !== rooms[roomName].isSummary) {
-            rooms[roomName].isSummary = state;
-            if (state) {
-                for (let i = 0; i < rooms[roomName].members.length; i++) {
-                    const id = rooms[roomName].members[i];
-                    const userNick = rooms[roomName].userNicks[i];
-                    startRecognitionStream(id, userNick, rooms[roomName].createMeetingTime, roomName, request);
-                }
-                console.log("다른 서버 요약시작");
-            } else {
-                for (let i = 0; i < rooms[roomName].members.length; i++) {
-                    const id = rooms[roomName].members[i];
-                    if (rooms[roomName].recognizeStream[id]) {
-                        rooms[roomName].recognizeStream[id].end();
-                    }
-                    rooms[roomName].recognizeStream[id] = null;
-                }
-                console.log("다른 서버 요약중지");
-            }
-        }
+        rooms[roomName].isSummary = state;
     } else if (channel === "checkChange") {
         const { roomName, index, isChecked } = JSON.parse(msg);
         if (rooms[roomName].script[index].isChecked !== isChecked) {
@@ -124,58 +104,21 @@ const calTime = (meetingTime) => {//발화시간 계산 함수
     return parseInt(elapsedTime);
 }
 
-const startRecognitionStream = (id, userNick, createMeetingTime, roomName, request) => {
-    // Creates a client
-    let client = new speech.SpeechClient();
-    rooms[roomName].recognizeStream[id] = client
-        .streamingRecognize(request)
-        .on('error', console.error)
-        .on('data', async function (data) {
-            process.stdout.write(
-                data.results[0] && data.results[0].alternatives[0]
-                    ? `${data.results[0].alternatives[0].transcript}\n`
-                    : '\n\nReached transcription time limit, press Ctrl+C\n'
-            );
-            const time = calTime(new Date(createMeetingTime));
-            /*io.to(roomName).emit("msg", userNick, time, data.results[0] && data.results[0].alternatives[0]
-                ? `${data.results[0].alternatives[0].transcript}\n`
-                : '\n\nReached transcription time limit, press Ctrl+C\n');
-            console.log('data 이벤트 발생: ' + userNick);*/
-            emitter.to(roomName).emit("msg", userNick, time, data.results[0] && data.results[0].alternatives[0]
-                ? `${data.results[0].alternatives[0].transcript}\n`
-                : '\n\nReached transcription time limit, press Ctrl+C\n');
-            console.log('data 이벤트 발생: ' + userNick);
-            //DB에 발화자와 발화 내용 저장
-            const content = data.results[0].alternatives[0].transcript;
-            content.replace('\n', '');
-            if (rooms[roomName] !== undefined) {
-                pubClient.publish("new_message", JSON.stringify({ roomName: roomName, len: rooms[roomName].script.length, script: { time: time, isChecked: false, nick: userNick, content: content } }));
-            }
-        });
-}
-
-const receiveData = (id, roomName, data) => {
-    if (rooms[roomName] !== undefined) {
-        if (rooms[roomName].recognizeStream[id]) {
-            rooms[roomName].recognizeStream[id].write(data);
-        }
-    }
-}
-
 io.on("connection", (socket) => {//특정 브라우저와 연결이 됨
     console.log(io.sockets.adapter.rooms);
     socket.on("meetingEnd", async (isHost) => {
         try {
-            rooms[socket.roomName].members.forEach((e) => {
-                if (rooms[socket.roomName].recognizeStream[e]) {
-                    rooms[socket.roomName].recognizeStream[e].end();
-                }
-                rooms[socket.roomName].recognizeStream[e] = null;
-            })
             delete rooms[socket.roomName];
 
         } catch (err) {
             console.error(err);
+        }
+    });
+    socket.on("getSttResult", (msg) => {
+        const time = calTime(new Date(rooms[socket.roomName].createMeetingTime));
+        emitter.to(socket.roomName).emit('msg', socket.userNick, time, msg);
+        if (rooms[roomName] !== undefined) {
+            pubClient.publish("new_message", JSON.stringify({ roomName: socket.roomName, len: rooms[roomName].script.length, script: { time: time, isChecked: false, nick: socket.userNick, content: msg } }));
         }
     });
     socket.on("summaryAlert", async (summaryFlag) => {
@@ -184,36 +127,6 @@ io.on("connection", (socket) => {//특정 브라우저와 연결이 됨
         rooms[roomName].isSummary = summaryFlag;
         console.log(socket.id);
         console.log(rooms[roomName].members);
-        /*let createMeetingTime;
-        try {
-            const meetingInfo = await Meeting.findOne({ _id: roomName });
-            createMeetingTime = meetingInfo.date;
-        } catch (err) {
-            console.error(err);
-        }*/
-        if (summaryFlag) {
-            let id;
-            for (let i = 0; i < rooms[roomName].members.length; i++) {
-                id = rooms[roomName].members[i];
-                userNick = rooms[roomName].userNicks[i];
-                //recordingStart(id, socket.userNick, createMeetingTime, roomName, socket.device);
-                console.log(id)
-                startRecognitionStream(id, userNick, rooms[roomName].createMeetingTime, roomName, request);
-            }
-            console.log(socket.id + " : 요약시작")
-        } else {
-            let id;
-            for (let i = 0; i < rooms[roomName].members.length; i++) {
-                id = rooms[roomName].members[i];
-                console.log(id);
-                //rooms[roomName].recording[id].stop();
-                if (rooms[roomName].recognizeStream[id]) {
-                    rooms[roomName].recognizeStream[id].end();
-                }
-                rooms[roomName].recognizeStream[id] = null;
-            }
-            console.log(socket.id + " : 요약중지");
-        }
         pubClient.publish("summaryAlert", JSON.stringify({ roomName: roomName, state: summaryFlag }));
     })
 
@@ -242,8 +155,6 @@ io.on("connection", (socket) => {//특정 브라우저와 연결이 됨
             socket.emit("initScripts", rooms[roomName].script);
             console.log(rooms[roomName].script);
             if (temp) {//들어왔는데 summary중임
-                ///recordingStart(socket.id, socket.userNick, createMeetingTime, roomName);
-                startRecognitionStream(socket.id, socket.userNick, currentMeetingTime, roomName, request);
                 console.log(socket.id + " : 요약시작")
             }
             rooms[roomName].members.push(socket.id);
@@ -267,10 +178,6 @@ io.on("connection", (socket) => {//특정 브라우저와 연결이 됨
             socket.to(roomName).emit("user-disconnected", userName);
             console.log("disconnect")
             if (rooms[roomName]) {
-                if (rooms[roomName].recognizeStream[socket.id]) {
-                    rooms[roomName].recognizeStream[socket.id].end();
-                    delete rooms[roomName].recognizeStream[socket.id];
-                }
                 console.log(socket.id + " " + userNick);
                 rooms[roomName].members = rooms[roomName].members.filter(e => {
                     return e !== socket.id;
@@ -285,14 +192,6 @@ io.on("connection", (socket) => {//특정 브라우저와 연결이 됨
     });
 
     socket.on("micOnOff", (micStatus) => {
-        if (micStatus) {
-            //recordingStart(socket.id, socket.userNick, rooms[socket.roomName].createMeetingTime, socket.roomName, socket.device);
-            startRecognitionStream(socket.id, socket.userNick, rooms[socket.roomName].createMeetingTime, socket.roomName, request);
-        } else {
-            //rooms[socket.roomName].recording[socket.id].stop();
-            rooms[socket.roomName].recognizeStream[socket.id].end();
-            rooms[socket.roomName].recognizeStream[socket.id] = null;
-        }
     });
 
     socket.on("handleCheck", (index, isChecked) => {

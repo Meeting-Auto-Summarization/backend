@@ -17,6 +17,19 @@ const subClient = pubClient.duplicate();
 const { Emitter } = require("@socket.io/redis-emitter");
 const emitter = new Emitter(pubClient);
 
+let rooms = {};
+
+app.use(morgan('dev'));
+
+const io = require(`socket.io`)(socketServer, {
+    cors: {
+        origin: "https://ec2-3-38-49-118.ap-northeast-2.compute.amazonaws.com",
+        credentials: true
+    }
+});
+io.adapter(createAdapter(pubClient, subClient));
+
+
 subClient.subscribe("new_room");
 subClient.subscribe("new_message");
 subClient.subscribe("summaryAlert");
@@ -34,7 +47,6 @@ subClient.on("message", (channel, msg) => {//roominfo
                 rooms[key] = value;
                 rooms[key].members = [];
                 rooms[key].userNicks = [];
-                //  rooms[key].recognizeStream = {};
             }
         }
     }
@@ -54,7 +66,6 @@ subClient.on("message", (channel, msg) => {//roominfo
             rooms[roomName].userNicks = [];
             rooms[roomName].createMeetingTime = createMeetingTime;
             rooms[roomName].hostId = hostId;
-            // rooms[roomName].recognizeStream = {};
             console.log(rooms);
         }
     } else if (channel === "new_message") {
@@ -75,28 +86,8 @@ subClient.on("message", (channel, msg) => {//roominfo
 });
 
 
-let rooms = {};
 
-app.use(morgan('dev'));
 
-const io = require(`socket.io`)(socketServer, {
-    cors: {
-        origin: "https://ec2-3-38-49-118.ap-northeast-2.compute.amazonaws.com",
-        credentials: true
-    }
-});
-io.adapter(createAdapter(pubClient, subClient));
-
-// 구글 STT 및 소켓
-const speech = require('@google-cloud/speech');
-const request = {
-    config: {
-        encoding: 'LINEAR16',
-        sampleRateHertz: 16000,
-        languageCode: 'ko-KR',
-    },
-    interimResults: false, // If you want interim results, set this to true
-};
 const calTime = (meetingTime) => {//발화시간 계산 함수
     const curTime = new Date();
     const elapsedTime = (curTime.getTime() - meetingTime.getTime()) / 1000;
@@ -115,10 +106,11 @@ io.on("connection", (socket) => {//특정 브라우저와 연결이 됨
         }
     });
     socket.on("getSttResult", (msg) => {
+        console.log(msg);
         const time = calTime(new Date(rooms[socket.roomName].createMeetingTime));
         emitter.to(socket.roomName).emit('msg', socket.userNick, time, msg);
-        if (rooms[roomName] !== undefined) {
-            pubClient.publish("new_message", JSON.stringify({ roomName: socket.roomName, len: rooms[roomName].script.length, script: { time: time, isChecked: false, nick: socket.userNick, content: msg } }));
+        if (rooms[socket.roomName] !== undefined) {
+            pubClient.publish("new_message", JSON.stringify({ roomName: socket.roomName, len: rooms[socket.roomName].script.length, script: { time: time, isChecked: false, nick: socket.userNick, content: msg } }));
         }
     });
     socket.on("summaryAlert", async (summaryFlag) => {
@@ -130,11 +122,6 @@ io.on("connection", (socket) => {//특정 브라우저와 연결이 됨
         pubClient.publish("summaryAlert", JSON.stringify({ roomName: roomName, state: summaryFlag }));
     })
 
-    ///
-    socket.on('binaryAudioData', function (data) {
-        const roomName = socket.roomName;
-        receiveData(socket.id, roomName, data);
-    });
 
     socket.on("join-room", async (roomName, userName, userNick, currentMeetingTime) => {
         console.log(userNick + "join");
@@ -167,10 +154,8 @@ io.on("connection", (socket) => {//특정 브라우저와 연결이 됨
             rooms[roomName].script = [];
             rooms[roomName].members = [socket.id];
             rooms[roomName].userNicks = [userNick];
-            //rooms[roomName].recording = {};
             rooms[roomName].createMeetingTime = currentMeetingTime;
             rooms[roomName].hostId = socket.id;
-            rooms[roomName].recognizeStream = {};
             socket.emit("initSummaryFlag", false);
         }
         console.log(rooms);
@@ -190,10 +175,6 @@ io.on("connection", (socket) => {//특정 브라우저와 연결이 됨
 
         });
     });
-
-    socket.on("micOnOff", (micStatus) => {
-    });
-
     socket.on("handleCheck", (index, isChecked) => {
         rooms[socket.roomName].script[index].isChecked = isChecked
         console.log("handleCheck : " + index);

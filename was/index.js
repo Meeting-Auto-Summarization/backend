@@ -10,11 +10,11 @@ const path = require(`path`);//내장모듈
 const fs = require(`fs`);
 const app = express();
 const cors=require(`cors`);
-/*const httpsServer = require(`https`).createServer({
+const httpsServer = require(`https`).createServer({
     cert: fs.readFileSync('/etc/nginx/certificate/nginx-certificate.crt'),
     key: fs.readFileSync('/etc/nginx/certificate/nginx.key'),
-}, app);*/
-const httpServer = require(`http`).createServer(app);
+}, app);
+
 
 app.set('port', process.env.PORT || 8001);
 
@@ -62,6 +62,6 @@ app.use((req, res) => {
     console.log(error);
 });
 
-httpServer.listen(3001, () => {
+httpsServer.listen(3001, () => {
     console.log("listen port 3001");
 })

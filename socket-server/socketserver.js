@@ -2,15 +2,12 @@ const express = require('express');
 const app = express();
 const morgan = require('morgan');
 const fs = require(`fs`);
-const socketServer = require(`https`).createServer({
-    cert: fs.readFileSync('/etc/nginx/certificate/nginx-certificate.crt'),
-    key: fs.readFileSync('/etc/nginx/certificate/nginx.key'),
-}, app);
+const socketServer = require(`http`).createServer(app);
 
+const socketPort = 3002;
 const { createAdapter } = require("@socket.io/redis-adapter");
 const { createClient } = require("redis");
 
-const socketPort = process.env.PORT || 3002;
 
 const pubClient = createClient({ host: '127.0.0.1', port: 6379 });
 const subClient = pubClient.duplicate();
@@ -23,7 +20,7 @@ app.use(morgan('dev'));
 
 const io = require(`socket.io`)(socketServer, {
     cors: {
-        origin: "https://ec2-3-38-49-118.ap-northeast-2.compute.amazonaws.com",
+        origin: "http://localhost:3000",
         credentials: true
     }
 });
@@ -186,7 +183,6 @@ io.on("connection", (socket) => {//특정 브라우저와 연결이 됨
 /*pubClient.on('disconnect',()=>{
     pubClient.quit();
 })
-
 subClient.on('disconnect',()=>{
     subClient.quit();
 })*/

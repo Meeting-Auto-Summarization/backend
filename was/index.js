@@ -7,9 +7,13 @@ const passportConfig = require('./passport');
 const connect = require('./schemas');
 const MongoStore = require('connect-mongo');
 const path = require(`path`);//내장모듈
+const fs = require(`fs`);
 const app = express();
 const cors = require(`cors`);
-const httpsServer = require(`http`).createServer(app);
+const httpsServer = require(`https`).createServer({
+    cert: fs.readFileSync('/etc/nginx/certificate/nginx-certificate.crt'),
+    key: fs.readFileSync('/etc/nginx/certificate/nginx.key'),
+}, app);
 
 
 app.set('port', process.env.PORT || 8001);
@@ -36,10 +40,10 @@ app.use(session({
     }),
 }));
 
-app.use(cors({
+/*app.use(cors({
     origin: "http://localhost:3000",
     credentials: true
-}));
+}));*/
 app.use(passport.initialize());
 app.use(passport.session());
 

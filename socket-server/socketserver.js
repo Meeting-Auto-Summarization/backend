@@ -2,17 +2,20 @@ const express = require('express');
 const app = express();
 const morgan = require('morgan');
 const fs = require(`fs`);
-const socketServer = require(`http`).createServer(app);
+const socketServer = require(`https`).createServer({
+    cert: fs.readFileSync('/etc/nginx/certificate/nginx-certificate.crt'),
+    key: fs.readFileSync('/etc/nginx/certificate/nginx.key'),
+}, app);
 
-const socketPort = 3002;
-/*const { createAdapter } = require("@socket.io/redis-adapter");
+const { createAdapter } = require("@socket.io/redis-adapter");
 const { createClient } = require("redis");
 
+const socketPort = process.env.PORT || 3002;
 
 const pubClient = createClient({ host: '127.0.0.1', port: 6379 });
 const subClient = pubClient.duplicate();
 const { Emitter } = require("@socket.io/redis-emitter");
-const emitter = new Emitter(pubClient);*/
+const emitter = new Emitter(pubClient);
 
 let rooms = {};
 
@@ -20,11 +23,11 @@ app.use(morgan('dev'));
 
 const io = require(`socket.io`)(socketServer, {
     cors: {
-        origin: "http://localhost:3000",
+        origin: "https://ec2-3-38-49-118.ap-northeast-2.compute.amazonaws.com",
         credentials: true
     }
 });
-/*io.adapter(createAdapter(pubClient, subClient));
+io.adapter(createAdapter(pubClient, subClient));
 
 
 subClient.subscribe("new_room");
@@ -82,7 +85,7 @@ subClient.on("message", (channel, msg) => {//roominfo
     console.log(rooms);
 });
 
-*/
+
 
 
 const calTime = (meetingTime) => {//발화시간 계산 함수
@@ -105,9 +108,9 @@ io.on("connection", (socket) => {//특정 브라우저와 연결이 됨
     socket.on("getSttResult", (msg) => {
         console.log(msg);
         const time = calTime(new Date(rooms[socket.roomName].createMeetingTime));
-        io.to(socket.roomName).emit('msg', socket.userNick, time, msg);
+        emitter.to(socket.roomName).emit('msg', socket.userNick, time, msg);
         if (rooms[socket.roomName] !== undefined) {
-            //pubClient.publish("new_message", JSON.stringify({ roomName: socket.roomName, len: rooms[socket.roomName].script.length, script: { time: time, isChecked: false, nick: socket.userNick, content: msg } }));
+            pubClient.publish("new_message", JSON.stringify({ roomName: socket.roomName, len: rooms[socket.roomName].script.length, script: { time: time, isChecked: false, nick: socket.userNick, content: msg } }));
         }
     });
     socket.on("summaryAlert", async (summaryFlag) => {
@@ -116,7 +119,7 @@ io.on("connection", (socket) => {//특정 브라우저와 연결이 됨
         rooms[roomName].isSummary = summaryFlag;
         console.log(socket.id);
         console.log(rooms[roomName].members);
-        // pubClient.publish("summaryAlert", JSON.stringify({ roomName: roomName, state: summaryFlag }));
+        pubClient.publish("summaryAlert", JSON.stringify({ roomName: roomName, state: summaryFlag }));
     })
 
 
@@ -145,7 +148,7 @@ io.on("connection", (socket) => {//특정 브라우저와 연결이 됨
             rooms[roomName].userNicks.push(userNick);
 
         } else {
-            //pubClient.publish("new_room", JSON.stringify({ roomName: roomName, roomInfo: { hostId: socket.id, createMeetingTime: currentMeetingTime } }))
+            pubClient.publish("new_room", JSON.stringify({ roomName: roomName, roomInfo: { hostId: socket.id, createMeetingTime: currentMeetingTime } }))
             rooms[roomName] = {};
             rooms[roomName].isSummary = false;
             rooms[roomName].script = [];
@@ -176,13 +179,14 @@ io.on("connection", (socket) => {//특정 브라우저와 연결이 됨
         rooms[socket.roomName].script[index].isChecked = isChecked
         console.log("handleCheck : " + index);
         io.to(socket.roomName).emit("checkChange", rooms[socket.roomName].script);
-        //    pubClient.publish("checkChange", JSON.stringify({ roomName: socket.roomName, index: index, isChecked: isChecked }));
+        pubClient.publish("checkChange", JSON.stringify({ roomName: socket.roomName, index: index, isChecked: isChecked }));
     });
 
 });
 /*pubClient.on('disconnect',()=>{
     pubClient.quit();
 })
+
 subClient.on('disconnect',()=>{
     subClient.quit();
 })*/

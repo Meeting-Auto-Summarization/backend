@@ -1,16 +1,37 @@
-//const DBService = require('../services/db-service');
-const path = require('path');
-const User = require('../schemas/user');
-const Meeting = require('../schemas/meeting');
-const Script = require('../schemas/script');
-const Report = require('../schemas/report');
+const DBService = require('../services/db-service');
 var fs = require('fs').promises;
 
-//회의 생성
+exports.exitMeeting = async (req, res, next) => {
+    const update = { isMeeting: false };
+    try {
+        await DBService.updateMeetingInfo(req.user.currentMeetingId, { $pull: { members: req.user._id } });
+        await DBService.updateUserInfo(req.user._id, update);
+        res.send('exitMeeting success');
+    } catch (err) {
+        console.error(err);
+        next(err);
+    }
+}
+
+exports.endMeeting = async (req, res, next) => {
+    try {
+        await DBService.updateScript(req.roomName, req.scripts);
+
+        await DBService.updateIsMeetingAllFalse(req.user.currentMeetingId);
+
+        await DBService.updateSubmitMeeting(req.user.currentMeetingId, req.body.time);
+        await DBService.updateSubmitScript(req.user.currentMeetingId, req.body.text);
+        res.send('endMeeting success');
+    } catch (err) {
+        console.error(err);
+        next(err);
+    }
+}
+
 exports.postCreateMeeting = async (req, res, next) => {
     try {
         let flag = false;
-        const ongoingMeeting = await Meeting.find({ ongoing: true });
+        const ongoingMeeting = await DBService.findOngoingMeeting();
         let code = '';
 
         while (!flag) {
@@ -24,98 +45,63 @@ exports.postCreateMeeting = async (req, res, next) => {
             }
 
             if (i == ongoingMeeting.length) {
-                flag = true
+                flag = true;
             }
-
-            console.log('생설 실패');
         }
 
-        const meeting = await Meeting.create({
-            title: req.body.title,
-            members: [],
-            code: code,
-            hostId: req.user._id,
-            capacity: req.body.capacity,
-        });
-        await Script.create({ //스크립트 document생성
-            meetingId: meeting._id,
-        });
-        await Report.create({//요약본 document생성
-            meetingId: meeting._id,
-        });
-        await User.findOneAndUpdate({//호스트의 참여회의 목록에 회의 id 추가, 현재 진행중인 미팅 id 저장
-            id: req.user.id,
-        }, {
-            $push: { meetings: meeting._id },
-            currentMeetingId: meeting._id,
-            currentMeetingTime: meeting.date,
-            $set: { isMeeting: true },
-        });
-        await Meeting.findByIdAndUpdate(//회의 참여자 목록에 호스트 id추가
-            meeting._id,
-            { $push: { members: req.user._id, visited: req.user._id } });
+        const meeting = await DBService.createMeeting(req.body.title, req.user._id, code, req.body.capacity);
+        await DBService.createScript(meeting._id)//스크립트 document생성
+        await DBService.createReport(meeting._id)//요약본 document생성
+
+        await DBService.updateUserInfo(//호스트의 참여회의 목록에 회의 id 추가, 현재 진행중인 미팅 id 저장
+            req.user._id,
+            {
+                $push: { meetings: meeting._id },
+                currentMeetingId: meeting._id,
+                currentMeetingTime: meeting.date,
+                $set: { isMeeting: true },
+            });
+
+        console.log('생설 실패');
+
+
         res.send(code);
+
     } catch (err) {
         console.error(err);
         next(err);
     }
 }
 
-//회의 참여
+
 exports.joinMeeting = async (req, res, next) => {
-    //코드에 맞는 회의가 있으면 현재사용자의 currentMeeting에 push하는 작업한 후 true 반환
     try {
-        const meeting = await Meeting.findOne({ code: req.params.code });
+        const meeting = await DBService.getMeetingByCode(req.params.code);
         if (!meeting || !meeting.ongoing) {
             res.send(false);
         } else {
             try {
-                await User.findOneAndUpdate({
-                    id: req.user.id,
-                }, {
-                    $addToSet: { meetings: meeting._id },
-                    currentMeetingId: meeting._id,
-                    meetingTime: meeting.date,
-                    $set: { isMeeting: true },
-                });
 
-                await Meeting.findOneAndUpdate(
-                    { code: req.params.code },
+                await DBService.updateUserInfo(
+                    req.user._id,
+                    {
+                        $addToSet: { meetings: meeting._id },
+                        currentMeetingId: meeting._id,
+                        meetingTime: meeting.date,
+                        $set: { isMeeting: true },
+                    });
+
+                await DBService.updateMeetingByCode(
+                    req.params.code,
                     { $addToSet: { members: req.user._id, visited: req.user._id } }
                 );
 
                 res.send(true);
             } catch (error) {
-                console.error(error);
-                next(error);
+                console.error(err);
+                throw Error(err);
             }
         }
-    } catch (err) {
-        console.error(err);
-        next(err);
-    }
-}
-exports.postSaveScripts = async (req, res, next) => {
-    try {
-        await Script.findOneAndUpdate({
-            meetingId: req.roomName,
-        }, {
-            //$push: { text: { nick: userNick, content: content } },
-            text: req.scripts,
-        });
-    } catch (err) {
-        console.error(err);
-    }
-
-}
-exports.exitMeeting = async (req, res, next) => {
-    try {
-        await Meeting.findByIdAndUpdate(
-            req.user.currentMeetingId,
-            { $pull: { members: req.user._id } }
-        )
-
-        res.send('success');
     } catch (err) {
         console.error(err);
         next(err);
@@ -123,26 +109,22 @@ exports.exitMeeting = async (req, res, next) => {
 }
 
 exports.deleteMeeting = async (req, res, next) => {
-    const deleted = req.body.deleted;
-    const userId = req.user._id;
-
     try {
-        const user = await User.findById(userId);
+        const user = await DBService.findUser(req.user._id);
         const meetings = user.meetings;
 
-        for (let i = 0; i < deleted.length; i++) {
-            meetings.splice(meetings.indexOf(deleted[i]), 1);
-            await User.findByIdAndUpdate(userId, { meetings: meetings });
-            await Meeting.findByIdAndUpdate(deleted[i], { $pull: { members: userId } });
+        for (let i = 0; i < req.body.deleted.length; i++) {
+            meetings.splice(meetings.indexOf(req.body.deleted[i]), 1);
+            await DBService.updateUserInfo(req.user._id, { meetings: meetings });
+            await DBService.updateMeetingInfo(req.body.deleted[i], { $pull: { members: req.user._id } });
 
-            const meeting = await Meeting.findById(deleted[i]);
+            const meeting = await DBService.findMeeting(req.body.deleted[i]);
             if (meeting.visited.length < 1) {
-                await Meeting.findByIdAndDelete(deleted[i]);
-                await Script.deleteOne({ meetingId: deleted[i] });
-                await Report.deleteOne({ meetingId: deleted[i] });
+                await DBService.deleteMeeting(req.body.deleted[i]);
+                await DBService.deleteScript({ meetingId: deleted[i] });
+                await DBService.deleteReport({ meetingId: deleted[i] });
             }
         }
-
         res.send('success');
     } catch (err) {
         console.error(err);
@@ -150,17 +132,13 @@ exports.deleteMeeting = async (req, res, next) => {
     }
 }
 
-//회의 목록 가져오기
 exports.getMeetingList = async (req, res, next) => {
-    const userId = req.user._id;
     let meetingList = [];
-
     try {
-        const user = await User.findById(userId);
+        let user = await DBService.findUser(req.user._id);
 
-        //회의 이름/날짜 DB에서 하나씩 받아옴
         for (let i = 0; i < user.meetings.length; i++) {
-            const meeting = await Meeting.findById(user.meetings[i]);
+            const meeting = await DBService.findMeeting(user.meetings[i]);
 
             if (meeting.ongoing) {
                 continue;
@@ -170,7 +148,8 @@ exports.getMeetingList = async (req, res, next) => {
 
             //위에서 받아온 하나의 회의에 대한 참여자 목록 받아옴
             for (let j = 0; j < meeting.visited.length; j++) {
-                const mem = await User.findById(meeting.visited[j]);
+                const mem = await DBService.findUser(meeting.visited[j]);
+                console.log(mem)
                 membersName.push(mem.name);
             }
 
@@ -188,19 +167,12 @@ exports.getMeetingList = async (req, res, next) => {
 }
 
 exports.changeUserInfo = async (req, res, next) => {
-    const userId = req.user._id;
-    const userInfo = req.body.values;
-
     try {
-        await User.findByIdAndUpdate(
-            userId,
-            {
-                firstName: userInfo.firstName,
-                lastName: userInfo.lastName,
-                email: userInfo.email,
-                name: userInfo.name,
-            }
-        );
+        const userInfo = { firstName: req.body.values.firstName, lastName: req.body.values.lastName, email: req.body.values.email, name: req.body.values.name };
+        await DBService.updateUserInfo(req.user._id, userInfo);
+
+        //await DBService.deleteUser(req.user._id);
+
         res.send('success');
     } catch (err) {
         console.error(err);
@@ -209,9 +181,9 @@ exports.changeUserInfo = async (req, res, next) => {
 }
 
 exports.deleteAccount = async (req, res, next) => {
-    res.sendFile(path.join(__dirname, '../index.html'));
+    //res.sendFile(path.join(__dirname, '../index.html'));
     try {
-        await User.findByIdAndDelete(req.user._id);
+        await DBService.deleteUser(req.user._id);
         res.send('success');
     } catch (err) {
         console.error(err);
@@ -220,17 +192,17 @@ exports.deleteAccount = async (req, res, next) => {
 }
 
 exports.getCurrentMeeting = async (req, res, next) => {
-    const meeting = await Meeting.findById(req.user.currentMeetingId);
-    const members = meeting.members;
-    const users = []
-
-    for (var i = 0; i < members.length; i++) {
-        const mem = await User.findById(members[i]);
-        const name = mem.name;
-        users.push(name);
-    }
-
     try {
+        let meeting = await DBService.findCurrentMeeting(req.user.currentMeetingId);
+        const members = meeting.members;
+        const users = []
+
+        for (var i = 0; i < members.length; i++) {
+            const mem = await DBService.findUser(members[i]);
+            const name = mem.name;
+            users.push(name);
+        }
+
         res.send({
             meeting: meeting,
             members: users
@@ -241,12 +213,9 @@ exports.getCurrentMeeting = async (req, res, next) => {
     }
 }
 
-
 exports.getCurrentMeetingScript = async (req, res, next) => {
-    const currentMeetingId = req.user.currentMeetingId;
-    const script = await Script.findOne({ meetingId: currentMeetingId });
-
     try {
+        let script = await DBService.findCurrentMeetingScript(req.user.currentMeetingId);
         res.send(script.text);
     } catch (err) {
         console.error(err);
@@ -254,31 +223,16 @@ exports.getCurrentMeetingScript = async (req, res, next) => {
     }
 }
 
-exports.postCurrentMeetingReport = async (req, res, next) => {
-    const currentMeetingId = req.user.currentMeetingId;
-    const filter = { meetingId: currentMeetingId }
-    const update = { report: req.body.report };
-
-    try {
-        await Report.findOneAndUpdate(filter, update);
-        res.send('success');
-    } catch (err) {
-        console.error(err);
-        next(err);
-    }
-}
-
 exports.getIsHost = async (req, res, next) => {
-    const meeting = await Meeting.findOne({ _id: req.user.currentMeetingId });
-    const hostId = meeting.hostId;
-    const userId = req.user._id;
-    const isHost = (hostId == userId);
-
     try {
+        let meeting = await DBService.findCurrentMeeting(req.user.currentMeetingId);
+        const hostId = meeting.hostId;
+        const userId = req.user._id;
+        const isHost = (hostId == userId);
         res.send(isHost);
     } catch (err) {
         console.error(err);
-        next(err)
+        next(err);
     }
 }
 
@@ -291,11 +245,11 @@ exports.getIsMeeting = async (req, res, next) => {
     }
 }
 
+
 exports.setIsMeetingFalse = async (req, res, next) => {
     const update = { isMeeting: false };
-
     try {
-        await User.findByIdAndUpdate(req.user._id, update);
+        await DBService.updateUserInfo(req.user._id, update);
         res.send('setIsMeetingFalseSuccess');
     } catch (err) {
         console.error(err);
@@ -303,24 +257,9 @@ exports.setIsMeetingFalse = async (req, res, next) => {
     }
 }
 
-exports.setIsMeetingAllFalse = async (req, res, next) => {
-    const filter = { currentMeetingId: req.user.currentMeetingId };
-    const update = { $set: { isMeeting: false } };
-
-    try {
-        await User.updateMany(filter, update);
-        res.send('setIsMeetingAllFalseSuccess');
-    } catch (err) {
-        console.error(err);
-        next(err);
-    }
-}
-
 exports.getCurrentMeetingTitle = async (req, res, next) => {
-    const currentMeetingId = req.user.currentMeetingId;
-    const meeting = await Meeting.findOne({ _id: currentMeetingId });
-
     try {
+        let meeting = await DBService.findCurrentMeeting(req.user.currentMeetingId);
         res.send(meeting.title);
     } catch (err) {
         console.error(err);
@@ -328,38 +267,17 @@ exports.getCurrentMeetingTitle = async (req, res, next) => {
     }
 }
 
-exports.postSubmitMeeting = async (req, res, next) => {
-    const currentMeetingId = req.user.currentMeetingId;
-
-    try {
-        await Meeting.findOneAndUpdate(
-            { _id: currentMeetingId },
-            { time: req.body.time, ongoing: false }
-        );
-        await Script.findOneAndUpdate(
-            { meetingId: currentMeetingId },
-            { text: req.body.text }
-        );
-        res.send('success');
-    } catch (err) {
-        console.error(err);
-        next(err);
-    }
-}
-
 exports.getMeetingResult = async (req, res, next) => {
-    const meetingId = req.params.meetingId;
-
     try {
-        const meeting = await Meeting.findById(meetingId);
-        const script = await Script.findOne({ meetingId: meetingId });
-        const report = await Report.findOne({ meetingId: meetingId });
+        let meeting = await DBService.findMeeting(req.params.meetingId);
+        let script = await DBService.findScript(req.params.meetingId);
+        let report = await DBService.findReport(req.params.meetingId);
 
         const members = meeting.visited;
         const users = []
 
         for (var i = 0; i < members.length; i++) {
-            const mem = await User.findById(members[i]);
+            const mem = await DBService.findUser(members[i]);
             const name = mem.name;
             users.push(name);
         }
@@ -377,20 +295,9 @@ exports.getMeetingResult = async (req, res, next) => {
 }
 
 exports.postMeetingResult = async (req, res, next) => {
-    const meetingId = req.body.meetingId;
-    const script = req.body.script;
-    const report = req.body.report;
-
     try {
-        await Script.findOneAndUpdate(
-            { meetingId: meetingId },
-            { text: script }
-        );
-        await Report.findOneAndUpdate(
-            { meetingId: meetingId },
-            { report: report }
-        );
-
+        await DBService.updateScript(req.body.meetingId, req.body.script);
+        await DBService.updateReport(req.body.meetingId, req.body.report);
         res.send('success');
     } catch (err) {
         console.error(err);

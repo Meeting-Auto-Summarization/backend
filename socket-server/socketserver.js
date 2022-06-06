@@ -105,7 +105,7 @@ io.on("connection", (socket) => {//특정 브라우저와 연결이 됨
     socket.on("getSttResult", (msg) => {
         console.log(msg);
         const time = calTime(new Date(rooms[socket.roomName].createMeetingTime));
-        emitter.to(socket.roomName).emit('msg', socket.userNick, time, msg);
+        io.to(socket.roomName).emit('msg', socket.userNick, time, msg);
         if (rooms[socket.roomName] !== undefined) {
             //pubClient.publish("new_message", JSON.stringify({ roomName: socket.roomName, len: rooms[socket.roomName].script.length, script: { time: time, isChecked: false, nick: socket.userNick, content: msg } }));
         }

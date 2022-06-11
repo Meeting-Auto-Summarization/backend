@@ -120,7 +120,7 @@ io.on("connection", (socket) => {//특정 브라우저와 연결이 됨
     });
     socket.on("summaryAlert", async (summaryFlag) => {
         const roomName = socket.roomName;
-        io.to(roomName).emit("summaryOffer", summaryFlag);
+        emitter.to(roomName).emit("summaryOffer", summaryFlag);
         rooms[roomName].isSummary = summaryFlag;
         console.log(socket.id);
         console.log(rooms[roomName].members);
@@ -183,7 +183,7 @@ io.on("connection", (socket) => {//특정 브라우저와 연결이 됨
     socket.on("handleCheck", (index, isChecked) => {
         rooms[socket.roomName].script[index].isChecked = isChecked
         console.log("handleCheck : " + index);
-        io.to(socket.roomName).emit("checkChange", rooms[socket.roomName].script);
+        emitter.to(socket.roomName).emit("checkChange", rooms[socket.roomName].script);
         pubClient.publish("checkChange", JSON.stringify({ roomName: socket.roomName, index: index, isChecked: isChecked }));
     });
 

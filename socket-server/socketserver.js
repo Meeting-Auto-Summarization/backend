@@ -88,9 +88,9 @@ subClient.on("message", (channel, msg) => {//roominfo
 
 
 
-const calTime = (meetingTime) => {//발화시간 계산 함수
-    const curTime = new Date();
-    const elapsedTime = (curTime.getTime() - meetingTime.getTime()) / 1000;
+const calTime = (meetingTime, nowTime) => {//발화시간 계산 함수
+    //const curTime = new Date();
+    const elapsedTime = (nowTime.getTime() - meetingTime.getTime()) / 1000;
 
     return parseInt(elapsedTime);
 }
@@ -105,9 +105,9 @@ io.on("connection", (socket) => {//특정 브라우저와 연결이 됨
             console.error(err);
         }
     });
-    socket.on("getSttResult", (msg) => {
+    socket.on("getSttResult", (msg, nowTime) => {
         console.log(msg);
-        const time = calTime(new Date(rooms[socket.roomName].createMeetingTime));
+        const time = calTime(new Date(rooms[socket.roomName].createMeetingTime), nowTime);
         emitter.to(socket.roomName).emit('msg', socket.userNick, time, msg);
         if (rooms[socket.roomName] !== undefined) {
             pubClient.publish("new_message", JSON.stringify({ roomName: socket.roomName, len: rooms[socket.roomName].script.length, script: { time: time, isChecked: false, nick: socket.userNick, content: msg } }));

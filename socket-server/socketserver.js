@@ -90,7 +90,7 @@ subClient.on("message", (channel, msg) => {//roominfo
 
 const calTime = (meetingTime, nowTime) => {//발화시간 계산 함수
     //const curTime = new Date();
-    const elapsedTime = (nowTime.getTime() - meetingTime.getTime()) / 1000;
+    const elapsedTime = (nowTime - meetingTime.getTime()) / 1000;
 
     return parseInt(elapsedTime);
 }

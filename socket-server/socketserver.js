@@ -105,6 +105,11 @@ io.on("connection", (socket) => {//특정 브라우저와 연결이 됨
             console.error(err);
         }
     });
+    socket.on("endEvent", () => {
+        if (rooms[socket.roomName].isSummary) {
+            socket.emit("restart");
+        }
+    })
     socket.on("getSttResult", (msg, nowTime) => {
         console.log(msg);
         const time = calTime(new Date(rooms[socket.roomName].createMeetingTime), nowTime);

@@ -3,6 +3,13 @@ const app = express();
 const morgan = require('morgan');
 const fs = require(`fs`);
 const socketServer = require(`http`).createServer(app);
+const path = require(`path`);//내장모듈
+const session = require('express-session');
+const connect = require('../was/schemas');
+const MongoStore = require('connect-mongo');
+const Script = require('../was/schemas/script');
+
+require(`dotenv`).config({ path: path.join(__dirname, `../credentials/.env`) })
 
 const socketPort = 3002;
 /*const { createAdapter } = require("@socket.io/redis-adapter");
@@ -24,6 +31,17 @@ const io = require(`socket.io`)(socketServer, {
         credentials: true
     }
 });
+
+connect();
+
+app.use(session({
+    secret: 'keyboard cat',
+    resave: false,
+    saveUninitialized: false,
+    store: MongoStore.create({
+        mongoUrl: process.env.MONGO_URL_PROD
+    }),
+}));
 /*io.adapter(createAdapter(pubClient, subClient));
 
 
@@ -102,10 +120,21 @@ io.on("connection", (socket) => {//특정 브라우저와 연결이 됨
             console.error(err);
         }
     });
-    socket.on("getSttResult", (msg) => {
+    socket.on("getSttResult", async function (msg) {
         console.log(msg);
         const time = calTime(new Date(rooms[socket.roomName].createMeetingTime));
         io.to(socket.roomName).emit('msg', socket.userNick, time, msg);
+
+        try {
+            await Script.findOneAndUpdate({
+                meetingId: socket.roomName,
+            }, {
+                $push: { text: { nick: socket.userNick, content: msg, time: time } },
+            });
+        } catch (err) {
+            console.error(err);
+        }
+
         if (rooms[socket.roomName] !== undefined) {
             //pubClient.publish("new_message", JSON.stringify({ roomName: socket.roomName, len: rooms[socket.roomName].script.length, script: { time: time, isChecked: false, nick: socket.userNick, content: msg } }));
         }
@@ -136,7 +165,15 @@ io.on("connection", (socket) => {//특정 브라우저와 연결이 됨
             //summaryflag값전달
             const temp = rooms[roomName].isSummary;
             socket.emit("initSummaryFlag", temp);
-            socket.emit("initScripts", rooms[roomName].script);
+            try {
+                const scripts = await Script.findOne({ meetingId: socket.roomName, });
+                socket.emit("initScripts", scripts.text);
+            } catch (err) {
+                console.error(err);
+            }
+
+            //socket.emit("initScripts", rooms[roomName].script);
+
             console.log(rooms[roomName].script);
             if (temp) {//들어왔는데 summary중임
                 console.log(socket.id + " : 요약시작")
@@ -172,10 +209,21 @@ io.on("connection", (socket) => {//특정 브라우저와 연결이 됨
 
         });
     });
-    socket.on("handleCheck", (index, isChecked) => {
-        rooms[socket.roomName].script[index].isChecked = isChecked
-        console.log("handleCheck : " + index);
-        io.to(socket.roomName).emit("checkChange", rooms[socket.roomName].script);
+    socket.on("handleCheck", async function (index, isChecked) {
+        //rooms[socket.roomName].script[index].isChecked = isChecked
+        io.to(socket.roomName).emit('checkChange', index, isChecked);
+        console.log("handleCheck : " + index + ', ' + isChecked);
+        try {
+            await Script.findOneAndUpdate({
+                meetingId: socket.roomName
+            }, {
+                $set: { [`text.${index}.isChecked`]: isChecked },
+            });
+
+        } catch (err) {
+            console.error(err);
+        }
+
         //    pubClient.publish("checkChange", JSON.stringify({ roomName: socket.roomName, index: index, isChecked: isChecked }));
     });
 

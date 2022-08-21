@@ -115,7 +115,6 @@ io.on("connection", (socket) => {//특정 브라우저와 연결이 됨
     socket.on("meetingEnd", async (isHost) => {
         try {
             delete rooms[socket.roomName];
-
         } catch (err) {
             console.error(err);
         }
@@ -174,7 +173,7 @@ io.on("connection", (socket) => {//특정 브라우저와 연결이 됨
 
             //socket.emit("initScripts", rooms[roomName].script);
 
-            console.log(rooms[roomName].script);
+            //console.log(rooms[roomName].script);
             if (temp) {//들어왔는데 summary중임
                 console.log(socket.id + " : 요약시작")
             }
@@ -185,7 +184,7 @@ io.on("connection", (socket) => {//특정 브라우저와 연결이 됨
             //pubClient.publish("new_room", JSON.stringify({ roomName: roomName, roomInfo: { hostId: socket.id, createMeetingTime: currentMeetingTime } }))
             rooms[roomName] = {};
             rooms[roomName].isSummary = false;
-            rooms[roomName].script = [];
+            //rooms[roomName].script = [];
             rooms[roomName].members = [socket.id];
             rooms[roomName].userNicks = [userNick];
             rooms[roomName].createMeetingTime = currentMeetingTime;

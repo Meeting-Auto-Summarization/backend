@@ -1,3 +1,6 @@
+const path = require(`path`);//내장모듈
+require(`dotenv`).config({ path: path.join(__dirname, `../credentials/.env`) })
+
 exports.getLoginStatus = (req, res) => {
     res.send('로그인 상태');
 }
@@ -17,8 +20,8 @@ exports.getUserMeetingInfo = (req, res) => {
 exports.getLogout = (req, res) => {
     req.logout();
     req.session.destroy();
-    res.redirect('http://localhost:3000/');
+    res.redirect(`${process.env.CLIENT_URL}/`);
 }
 exports.getGoogleLoginCallback = (req, res) => {
-    res.redirect('http://localhost:3000/meeting-list');
+    res.redirect(`${process.env.CLIENT_URL}/meeting-list`);
 }
